@@ -39,7 +39,7 @@ flowchart TD
     ANON --> N02["02 cleaning"]
     N02 --> CLEAN[("trenord_reviews_clean.csv<br/>local only")]
     CLEAN --> N03["03 analysis"]
-    N03 --> PNG["six charts, chart_*.png"]
+    N03 --> PNG["six charts in reports/figures"]
     CLEAN --> N04a["04a topic model training"]
     N04a --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
     N04a --> MODEL[("bertopic_model, frozen<br/>local only")]
@@ -63,7 +63,8 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `data/raw/trenord_reviews_raw.csv` | 01 | no (gitignored) |
 | `trenord_reviews_anon.csv` | 01b | no |
 | `trenord_reviews_clean.csv` | 02 | no |
-| `chart_*.png` (6 charts) | 03 | yes |
+| `reports/figures/chart_*.png` (6 charts) | 03 | yes |
+| `reports/figures/dashboard_overview.png` (dashboard screenshot) | — | yes |
 | `trenord_reviews_topics.csv`, `bertopic_model/` | 04a | no |
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 04b | yes |
 | `bertopic_model_final/` | 04b | no |
@@ -159,6 +160,7 @@ to the original data.
 
 ### Known limitations
 - The scraper is unofficial: the endpoint can change, and it serves only a subset of the store's reviews.
+- The sample reflects what the endpoint serves, so older periods may be under-represented relative to the store total.
 - Ratings without text cannot be retrieved, so coverage is measured against ratings, not written reviews.
 - Rerunning 01 produces a new snapshot and overwrites the raw file.
 
@@ -281,7 +283,7 @@ over the years, and how often the company answered. It produces six charts.
 
 ### Input and output
 - Input: `trenord_reviews_clean.csv` (all languages).
-- Output: six charts, saved with `dpi=150`:
+- Output: six charts in `reports/figures/`, saved with `dpi=150`:
   - `chart_rating_distribution.png`
   - `chart_reviews_per_year.png`
   - `chart_avg_rating_over_time.png`
@@ -607,6 +609,18 @@ a new snapshot, and 04a a new model.
 - Pinned dependencies: `requirements-notebooks.txt` for the notebooks, `requirements.txt` for the dashboard.
 - Secret key in `.env` (template: `.env.example`).
 
+**How to run.**
+
+```bash
+python -m venv venv_trenord
+venv_trenord\Scripts\activate               # Windows; on macOS / Linux: source venv_trenord/bin/activate
+pip install -r requirements-notebooks.txt   # notebooks
+pip install -r requirements.txt             # dashboard
+cp .env.example .env                        # then set PSEUDO_KEY to a long random string
+# Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04b (04a only to retrain, see below)
+streamlit run dashboard/app.py              # from the repository root
+```
+
 **Deterministic steps.**
 - 01b, given the same raw file and key.
 - 02, for fixed library versions.
@@ -650,3 +664,11 @@ regenerate the published topics and labels exactly without the original raw data
 
 **Notebook outputs.** The notebooks print only counts and aggregates. No review texts, names or keys appear in any
 saved output.
+
+---
+
+## 12. Future work
+
+- **Aspect-based sentiment analysis**, to capture several issues and opinions within one review instead of one
+  topic per review.
+- **Analysis of the developer replies**: their content, response time, and effect on later ratings.
