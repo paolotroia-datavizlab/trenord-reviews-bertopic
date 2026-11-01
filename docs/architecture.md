@@ -154,6 +154,8 @@ to the original data.
 ### Validation
 - Coverage is computed and printed.
 - The loop ended on the endpoint's "no more reviews" condition, not on the target.
+- The outputs saved in notebook 01 come from the scrape behind the current data snapshot. The notebook is not rerun,
+  because that would rescrape; the dataframe cell (cell 8) has no saved output because it was edited after that run.
 
 ### Known limitations
 - The scraper is unofficial: the endpoint can change, and it serves only a subset of the store's reviews.
@@ -227,8 +229,10 @@ count as the same word.
 
 ### Input and output
 - Input: `trenord_reviews_anon.csv`.
-- Output: `trenord_reviews_clean.csv`, which adds
-  `year, month, day_of_week, year_month, language, text_clean, word_count, text_lemmatized`.
+- Output:
+  - `trenord_reviews_clean.csv`, which adds
+    `year, month, day_of_week, year_month, language, text_clean, word_count, text_lemmatized`;
+  - `dashboard/stopwords_it.txt`, the stopword list used by the dashboard.
 
 ### Method
 1. Load the anonymised file (cell 2).
@@ -240,7 +244,9 @@ count as the same word.
    `[a-zàèéìíòóùú\s]` with spaces, collapse whitespace. Count words on the original text (cell 5).
 5. [Lemmatize](glossary.md#lemmatization) with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
    is alphabetic, is not one of the [stopwords](glossary.md#stopwords) and has a lemma longer than 2 characters (cell 6).
-6. Save (cell 7).
+6. Export spaCy's Italian `STOP_WORDS` to `dashboard/stopwords_it.txt`: a header comment, then one word per line,
+   sorted, UTF-8 (cell 7).
+7. Save (cell 8).
 
 ### Parameters
 
@@ -501,7 +507,11 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
 - `trenord_reviews_analysis.csv`: informative reviews, used by most views and by the filters.
 - `trenord_reviews_labeled.csv`: all Italian reviews, used for reply rates and rating trends.
 - `top_reviews_per_topic.csv`: shown in Deep Dive.
-- `dashboard/stopwords_it.txt`: a static copy of the 624 spaCy Italian stopwords.
+- `dashboard/stopwords_it.txt`: the 624 Italian stopwords of spaCy 3.8.14, exported by notebook 02 (§5).
+  - **Regenerate:** rerun notebook 02, which rewrites the file. The app skips lines starting with `#`.
+  - **Why a static export:** lightweight stopword libraries have different Italian lists, which would make the
+    Words tab inconsistent with the notebooks. The export keeps the dashboard on the pipeline's exact list without
+    installing spaCy.
 
 ### Filters
 - Sidebar filters: a year range slider, one checkbox per star rating and one per category.
@@ -611,6 +621,12 @@ a new snapshot, and 04a a new model.
 **Why 04a must not be retrained without rebuilding the label map.** The label map refers to the topic ids and sizes
 of the frozen model. A retrained model can number and size its topics differently, so labels would attach to the
 wrong reviews. The guard in 04b stops with an error in that case.
+
+**What a fresh clone can reproduce.** The frozen BERTopic model, the raw data and the intermediate CSVs are not
+published, so on a fresh clone 04b cannot run as is. Rerunning 04a may produce different topic ids, which the guard
+in 04b catches. Someone cloning the repository can therefore run the dashboard on the published CSVs, inspect every
+notebook with its saved outputs, and rerun the whole pipeline on a new scrape with their own key. They cannot
+regenerate the published topics and labels exactly without the original raw data and the frozen model.
 
 ---
 

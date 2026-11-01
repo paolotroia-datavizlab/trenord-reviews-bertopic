@@ -113,6 +113,14 @@ streamlit run dashboard/app.py
 
 The pseudonymised ids depend on the key, so outputs are only reproducible with the same `.env`.
 
+**What a fresh clone can reproduce.** The frozen BERTopic model is not published, nor are the raw data and the
+intermediate CSVs, so on a fresh clone notebook 04b cannot run as is. Rerunning 04a may produce different topic
+ids, which the guard in 04b catches with an error.
+
+In short, you can run the dashboard on the published CSVs, read every notebook with its saved outputs, and rerun the
+pipeline on a new scrape with your own key. You cannot regenerate the published topics and labels exactly without
+the original raw data and the frozen model.
+
 ## Limitations
 
 - Partial and non-random sample of the store reviews (about 43% coverage, `Sort.NEWEST`, unofficial scraper).

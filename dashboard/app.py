@@ -83,8 +83,14 @@ def load_reviews(file_name):
 
 @st.cache_data
 def load_stopwords():
-    # Static copy of the spaCy Italian stopword list, so the app does not need spaCy
-    return set(STOPWORDS_FILE.read_text(encoding="utf-8").split())
+    # Static export of the spaCy Italian stopword list, written by notebook 02,
+    # so the app does not need spaCy. Lines starting with "#" are comments.
+    stopwords = set()
+    for line in STOPWORDS_FILE.read_text(encoding="utf-8").splitlines():
+        word = line.strip()
+        if word and not word.startswith("#"):
+            stopwords.add(word)
+    return stopwords
 
 # Informative reviews only — EXCLUDE topics already removed by notebook 04b
 df_analysis    = load_reviews("trenord_reviews_analysis.csv")
