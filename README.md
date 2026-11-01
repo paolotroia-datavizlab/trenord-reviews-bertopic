@@ -1,4 +1,4 @@
-# Trenord App — Review Analysis
+# Trenord App Reviews: Topic Modeling with BERTopic
 
 What do users complain about, and what do they appreciate, in the Trenord mobile app?
 This project collects the public Google Play Store reviews of the Trenord app (`it.nordcom.app`),
@@ -6,7 +6,8 @@ pseudonymises them, explores ratings and developer replies over time, and groups
 reviews into topics with BERTopic. The results are published in an interactive Streamlit dashboard.
 
 **Dashboard:** https://trenord-review-analysis.streamlit.app
-**Technical documentation:** [docs/architecture.md](docs/architecture.md)
+**Technical documentation:** [docs/architecture.md](docs/architecture.md) (methods, parameters, validation, key numbers)
+**Glossary:** [docs/glossary.md](docs/glossary.md) (technical terms used in the documentation)
 
 ## Key results
 
@@ -30,7 +31,7 @@ every year from 2015 to 2025 meets it.
 | Poor Usability | Problem | 531 | 8.8% | 1.45 |
 | Ease of Use | Praise | 500 | 8.3% | 4.53 |
 
-  Ease of Use is also the largest Praise topic. The full table of the 13 topics is in [docs/architecture.md](docs/architecture.md#7-notebook-04b--topic-labeling-and-export)
+  Ease of Use is also the largest Praise topic. The full table of the 13 topics is in [docs/architecture.md](docs/architecture.md#8-notebook-04b--topic-labeling-and-export)
   and in the dashboard.
 
 ### Charts (notebook 03, all reviews)
