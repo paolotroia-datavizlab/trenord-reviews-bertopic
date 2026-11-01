@@ -1,0 +1,14 @@
+venv_trenord/
+data/raw/*.csv
+data/processed/bertopic_model/
+data/processed/bertopic_model_final/
+data/processed/trenord_reviews_topics.csv
+data/processed/trenord_reviews_clean.csv
+__pycache__/
+.ipynb_checkpoints/
+*.pt
+*.bin
+.env
+.streamlit/secrets.toml
+data/processed/trenord_reviews_anon.csv
+labeling/

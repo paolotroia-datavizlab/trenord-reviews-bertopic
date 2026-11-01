@@ -1,0 +1,25 @@
+# Notebook pipeline dependencies (01 → 04b). Dashboard dependencies: requirements.txt
+# Python 3.13 (see .python-version)
+
+# Core
+pandas==3.0.2
+numpy==2.4.4
+matplotlib==3.10.9
+python-dotenv==1.2.4
+ipykernel==7.2.0
+
+# 01 - scraping
+google-play-scraper==1.2.7
+
+# 02 - language detection and lemmatization
+lingua-language-detector==2.2.0
+spacy==3.8.14
+it_core_news_lg @ https://github.com/explosion/spacy-models/releases/download/it_core_news_lg-3.8.0/it_core_news_lg-3.8.0-py3-none-any.whl#sha256=b78582d0b2d05fd6509995f68ab7452efed7a27c6fbc5a071e9a9787a58c1e87
+
+# 04a / 04b - topic modeling
+bertopic==0.17.4
+sentence-transformers==5.4.1
+torch==2.11.0
+umap-learn==0.5.12
+hdbscan==0.8.42
+scikit-learn==1.8.0
