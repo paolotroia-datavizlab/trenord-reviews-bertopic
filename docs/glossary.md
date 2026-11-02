@@ -47,7 +47,8 @@ all reviews; notebook 04b measures this.
 
 ## Frozen model
 A trained model that is saved and deliberately never retrained, so that results that depend on it stay valid.
-The label map in 04b depends on the topic ids of the frozen BERTopic model from 04a.
+The label map in 04b depends on the topic ids of the frozen BERTopic model from 04a. In its default frozen mode,
+04a reads the topic of each review from this model instead of training a new one.
 
 ## HDBSCAN
 A clustering algorithm that finds groups of points in dense regions and leaves isolated points unassigned as
@@ -55,8 +56,9 @@ outliers. It does not need the number of clusters in advance.
 It forms the topics from the reduced review embeddings.
 
 ## HMAC
-Hash-based message authentication code: a one-way fingerprint of a value computed with a secret key. Without
-the key, nobody can recompute or reverse it.
+Hash-based message authentication code: a one-way fingerprint of a value computed with a
+[secret key](#secret-key). The same value and key always give the same code. Without the key, nobody can
+recompute the code from the value or reverse it.
 It replaces the original review ids (HMAC-SHA256, truncated to 12 hexadecimal characters).
 
 ## Language detection confidence
@@ -66,6 +68,12 @@ Notebook 02 accepts Italian at any confidence and other languages only at 0.5 or
 ## Lemmatization
 Reducing each word to its dictionary form, for example a conjugated verb to its infinitive.
 It groups word variants in the frequency analyses of the dashboard.
+
+## Lock file
+A list of every installed package with its exact version, including the indirect dependencies that a
+requirements file does not pin, so that the same environment can be rebuilt.
+`requirements-notebooks.lock.txt` is the `pip freeze` of the environment of 2026-11-02, not of the one in which the
+frozen model was trained.
 
 ## Maalej taxonomy
 A classification of app reviews into bug reports, feature requests, user experiences and ratings, proposed by
@@ -98,11 +106,18 @@ Here the review ids are replaced by keyed hashes and the author names are remove
 
 ## Random seed
 A fixed starting value for a random process, which makes its result repeatable.
-UMAP uses `random_state=42`, so the topic model can be reproduced.
+UMAP uses `random_state=42`. This makes training repeatable only in the same software environment: after the
+environment was rebuilt, retraining gave a different clustering.
 
 ## Safetensors
 A file format for storing model weights safely, without the code-execution risks of pickle files.
 Both BERTopic models are saved in this format.
+
+## Secret key
+A random value known only to its owner, used to compute codes that others cannot recompute.
+`PSEUDO_KEY` is the HMAC key of the pseudonymization. It is generated with
+`python -c "import secrets; print(secrets.token_hex(32))"` and stored only in the gitignored `.env`. Changing it
+changes every `review_id`.
 
 ## Sentence transformer
 A neural network that turns a whole sentence or paragraph into a single embedding.

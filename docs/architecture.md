@@ -40,9 +40,9 @@ flowchart TD
     N02 --> CLEAN[("trenord_reviews_clean.csv<br/>local only")]
     CLEAN --> N03["03 analysis"]
     N03 --> PNG["six charts in reports/figures"]
-    CLEAN --> N04a["04a topic model training"]
+    CLEAN --> N04a["04a topics, frozen mode"]
     N04a --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
-    N04a --> MODEL[("bertopic_model, frozen<br/>local only")]
+    MODEL[("bertopic_model, frozen<br/>local only")] -.->|"topics_"| N04a
     TOPICS --> N04b["04b labeling and export"]
     MODEL --> N04b
     N04b --> LAB[("trenord_reviews_labeled.csv")]
@@ -65,7 +65,8 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `trenord_reviews_clean.csv` | 02 | no |
 | `reports/figures/chart_*.png` (6 charts) | 03 | yes |
 | `reports/figures/dashboard_overview.png` (dashboard screenshot) | — | yes |
-| `trenord_reviews_topics.csv`, `bertopic_model/` | 04a | no |
+| `trenord_reviews_topics.csv` | 04a | no |
+| `bertopic_model/` (frozen; rewritten only with `RETRAIN = True`) | 04a | no |
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 04b | yes |
 | `bertopic_model_final/` | 04b | no |
 
@@ -173,20 +174,34 @@ a code that cannot be traced back without a secret key. It is the only step that
 everything after it works on protected data.
 
 ### Input and output
-- Input: the raw file (read only), plus `PSEUDO_KEY` from `.env`, found with `load_dotenv(find_dotenv(usecwd=True))`.
+- Input: the raw file (read only), plus the [secret key](glossary.md#secret-key) `PSEUDO_KEY` from `.env`.
 - Output: `trenord_reviews_anon.csv`, with the raw columns minus `author`.
 
+### The secret key
+- **Generation.** 64 hexadecimal characters (256 random bits), generated in the project venv with
+  `python -c "import secrets; print(secrets.token_hex(32))"`.
+- **Storage.** Only in `.env` at the repository root, which is gitignored. `.env.example` is the tracked template:
+  it explains the variable and holds the placeholder `change_me`.
+- **Loading.** `find_dotenv(usecwd=True)` searches for `.env` from the working directory (`notebooks/`) upwards, and
+  `load_dotenv()` adds its variables to the environment, where `os.getenv("PSEUDO_KEY")` reads them.
+- **Key check.** The notebook stops before hashing if the key is missing, empty or still `change_me`: ids hashed
+  with a known key could be recomputed by anyone from the public store ids.
+- **Rotation.** The key was rotated on 2026-11-02 and the pipeline rerun (§10). Every published `review_id` changed;
+  nothing else did.
+
 ### Method
-1. Load the key and the raw file. The notebook stops if the key is missing, empty or equal to the placeholder
-   `change_me` (cell 2).
+1. Load the key and the raw file, and run the key check. The key is encoded to bytes once, as `KEY_BYTES`, instead
+   of at every call of `pseudonymize_id` (cell 2).
 2. Replace `review_id` with an [HMAC](glossary.md#hmac):
-   `hmac.new(key_bytes, message_bytes, hashlib.sha256).hexdigest()[:12]` (cell 3).
+   `hmac.new(KEY_BYTES, message_bytes, hashlib.sha256).hexdigest()[:12]` (cell 3).
 3. Mask ticket-like codes in `text` as `[CODE]`: first mixed letter-and-digit strings of 8 or more characters,
    then runs of 8 or more digits (cell 4).
    - `MIXED_CODE_PATTERN = r"\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{8,}\b"`
    - `DIGIT_CODE_PATTERN = r"(?<!\d)\d{8,}(?!\d)"`
 4. Drop `author` (cell 5).
 5. Run the checks; the output is saved only if all of them pass (cells 6–7).
+6. Preview the first rows of `review_id, rating, thumbs_up, app_version, date, has_reply` (cell 8). Text and reply
+   columns are left out because notebook outputs are published.
 
 `reply_text`, the developer's public reply, is kept exactly as in the raw file.
 
@@ -194,8 +209,9 @@ everything after it works on protected data.
 
 | Parameter | Value | Why |
 |---|---|---|
-| Hash | HMAC-SHA256 | Keyed: stable across runs, but not recomputable without the key. |
-| Truncation | 12 hex characters (48 bits) | "Ample to keep ~7,000 ids unique" (notebook comment); uniqueness is also checked. |
+| Hash | HMAC-SHA256 | Keyed: stable across runs with the same key, but not recomputable without it. |
+| Key | 64 hex characters (`secrets.token_hex(32)`) | 256 random bits from Python's cryptographically secure generator. |
+| Truncation | 12 hex characters (48 bits) | Short, yet the chance of any collision among ~7,300 ids is about 1 in 10 million (notebook comment); uniqueness is also checked. |
 | Code length | 8+ characters | Typical length of ticket, order and card numbers; set by hand, not tuned. |
 
 ### Design decisions
@@ -205,7 +221,7 @@ everything after it works on protected data.
 - **Reply text left intact.** An earlier version also removed reviewer names from `reply_text`. That step was
   dropped: the reply is kept identical to the text published on the store, and this is verified row by row.
 
-### Validation (final run)
+### Validation (final run, after the key rotation)
 
 | Check | Result |
 |---|---|
@@ -215,11 +231,12 @@ everything after it works on protected data.
 | No original `review_id` present | PASS |
 | `reply_text` identical to raw for every row | PASS (0 rows different; 3,052 non-null replies in both) |
 | `[CODE]` replacements in `text` | 5 |
+| Compared with the run before the rotation | every `review_id` different, no id shared; all other columns identical |
 
 ### Known limitations
 - Reviewers may write personal information in the text; only ticket-like codes are masked.
 - `reply_text` is published unchanged, so it can greet the reviewer by first name, as on the store.
-- Pseudonymised ids can be reproduced only with the same key.
+- Pseudonymised ids can be reproduced only with the same key. Ids made with different keys cannot be joined.
 
 ---
 
@@ -322,20 +339,34 @@ The charts are regenerated from the data at every run; no number in them is hard
 ## 7. Notebook 04a — Topic model training
 
 **In plain words.** This notebook reads the Italian reviews and lets an algorithm group together the reviews that
-talk about similar things, without being told the themes in advance. The result is saved once and then kept
-unchanged, because the human labels given to each group later depend on it.
+talk about similar things, without being told the themes in advance. The result was saved once and is kept
+unchanged, because the human labels given to each group later depend on it. Normally the notebook does not train
+again: it reads the saved model and writes out the group of each review.
 
 ### Input and output
-- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`.
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`; in frozen mode also `bertopic_model/`.
 - Output:
   - `trenord_reviews_topics.csv`: the clean columns plus `topic`.
-  - `bertopic_model/`: saved with `serialization="safetensors"`, `save_ctfidf=True`,
+  - `bertopic_model/`, only when retraining: saved with `serialization="safetensors"`, `save_ctfidf=True`,
     `save_embedding_model="paraphrase-multilingual-mpnet-base-v2"` ([safetensors](glossary.md#safetensors)).
 
-### Method (parameters verbatim)
+### Modes: the `RETRAIN` flag
+The first code cell sets `RETRAIN = False`.
+- **Frozen mode (`RETRAIN = False`, default).** Cells 2–4 and 9 run; the training cells 5–8 print "Skipped".
+  - Cell 4 loads the [frozen model](glossary.md#frozen-model) with `BERTopic.load(..., embedding_model=...)`.
+  - It takes the topic stored for each training document (`topic_model.topics_`, in training order).
+  - It checks that there are as many assignments as Italian rows, and attaches them to `italian_df`. The Italian
+    rows have the same filter and order as in training.
+  - Cell 9 writes `topics.csv` and leaves `bertopic_model/` untouched.
+  - `review_id` is not a model input, so a new [secret key](glossary.md#secret-key) does not change any topic.
+- **Retraining (`RETRAIN = True`).** Cells 5–8 run the training below, and cell 9 overwrites the frozen model.
+  Cells 4 and 9 print a warning that the label map in 04b must be rebuilt. Retraining is environment-sensitive
+  (see Validation), so it is only for a new labeling.
+
+### Method (parameters verbatim; cells 5–8 run only when retraining)
 1. Load the data and keep the Italian reviews (cell 2).
 2. Prepare the `text_clean` texts. Empty or missing texts are replaced by `" "`; there were none in this run (cell 3).
-3. Configure the model (cell 4):
+3. Configure the model (cell 5):
    - embeddings from the [sentence transformer](glossary.md#sentence-transformer)
      `SentenceTransformer("paraphrase-multilingual-mpnet-base-v2")`;
    - [UMAP](glossary.md#umap): `UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42)`;
@@ -344,12 +375,14 @@ unchanged, because the human labels given to each group later depend on it.
      `CountVectorizer(stop_words=list(italian_stopwords), min_df=5, ngram_range=(1, 2))`, with spaCy's Italian stopwords;
    - [MMR](glossary.md#mmr-maximal-marginal-relevance): `MaximalMarginalRelevance(diversity=0.3)`;
    - BERTopic: `top_n_words=10, language="multilingual", calculate_probabilities=False`.
-4. Train with `fit_transform(texts)`: 30 topics and 1,609 outliers, which get topic −1 (cell 5).
+4. Train with `fit_transform(texts)`: 30 topics and 1,609 outliers, which get topic −1 (cell 6).
 5. [Reduce outliers](glossary.md#outlier-reduction) with
-   `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 6).
+   `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 7).
 6. Update the [topic representations](glossary.md#topic-representation), with [c-TF-IDF](glossary.md#c-tf-idf) keywords:
-   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)` (cell 7).
-7. Save the model and the topic assignments (cell 8).
+   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)` (cell 8).
+7. Save the topic assignments, and the model when retraining (cell 9).
+
+The figures in steps 4–5 come from the original training run.
 
 ### Parameters
 
@@ -376,21 +409,40 @@ unchanged, because the human labels given to each group later depend on it.
 - **MMR** reduces redundant keywords, such as the singular and plural of the same word.
 - **Training separated from labeling.** An earlier single notebook (19 final topics) was replaced by 04a
   (training) and 04b (labeling). The model is trained once and becomes a [frozen model](glossary.md#frozen-model).
+- **Frozen mode by default.** Retraining gave a different clustering after the environment changed (below), so the
+  notebook rebuilds `topics.csv` from the stored assignments instead of retraining. This keeps the 04b label map
+  valid whatever the environment.
 
 ### Validation
 - 30 topics, with sizes from 43 to 1,119 reviews; 0 outliers after reduction.
-- **Reproducibility check (2026-11-01).** After the anonymization change, the notebook was rerun and compared with a
-  backup of the frozen model, matching rows on `review_id`:
+- **Retraining in the same environment (2026-11-01).** After the anonymization change, the notebook was retrained in
+  the environment where the model had been trained. It was compared with a backup of the frozen model, matching
+  rows on `review_id`:
   - 0 of 6,951 rows changed topic;
   - the number and sizes of the topics were identical;
   - the top-10 keywords and their weights were identical for all 30 topics.
 
   The only difference between files was the order of the 624 stopwords stored in the vectorizer configuration,
   because spaCy stores them as a set.
+- **Retraining after the venv was rebuilt (2026-11-02).** After the project folder was renamed, the virtual
+  environment was rebuilt from the same `requirements-notebooks.txt`. The notebook was retrained with the same code
+  and data, and compared with the frozen model row by row (ids had changed with the key rotation):
+  - 6,428 of 6,951 rows had a different topic id;
+  - 92.1% of rows agreed under the best matching between old and new topics;
+  - the adjusted Rand index was 0.81;
+  - there were still 30 topics, but with different sizes (the largest 1,214 and 1,143, against 1,119 and 686) and
+    different keywords.
+
+  The packages installed in the original environment were not recorded, so the exact cause cannot be identified.
+  The most likely cause is the indirect dependencies, which `requirements-notebooks.txt` does not pin, such as
+  transformers, numba and pynndescent. The new run was discarded and the frozen model restored.
+- **Frozen mode (2026-11-02).** `topics.csv` rebuilt from the frozen model: `topic` identical to the restored file
+  for every row, and every other column identical except `review_id`. The model files were unchanged (SHA-256).
 
 ### Known limitations
 - Each review gets one topic, although many mention several issues.
-- Reproducibility was verified on one machine with the pinned library versions.
+- Retraining is reproducible only in the same environment. The [lock file](glossary.md#lock-file) records today's
+  environment, not the one in which the frozen model was trained.
 - Some topics are dominated by short, generic reviews (see the exclusion rule in 04b).
 
 ---
@@ -601,50 +653,72 @@ The test passed on Python 3.13 and 3.14. The scenarios are in `tests/test_dashbo
 
 ## 10. Reproducibility
 
-**Run order.** 01 → 01b → 02 → 03 → 04a → 04b → dashboard. In normal use 01 and 04a are **not** rerun: 01 would make
-a new snapshot, and 04a a new model.
+**Run order.** 01 → 01b → 02 → 03 → 04a → 04b → dashboard. In normal use 01 is **not** rerun, because it would make a
+new snapshot. 04a runs in frozen mode (`RETRAIN = False`, §7), so it rebuilds `topics.csv` from the frozen model
+without training a new one.
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
-- Pinned dependencies: `requirements-notebooks.txt` for the notebooks, `requirements.txt` for the dashboard.
-- Secret key in `.env` (template: `.env.example`).
+- Pinned direct dependencies: `requirements-notebooks.txt` for the notebooks, `requirements.txt` for the dashboard.
+- Full environment: `requirements-notebooks.lock.txt`, a [lock file](glossary.md#lock-file) from `pip freeze`. It
+  pins all 138 installed packages, including indirect ones such as transformers, numba and pynndescent.
+  - It captures the environment of 2026-11-02, in which the pipeline was rerun in frozen mode and the tests pass.
+  - It is **not** the environment in which the frozen model was trained, which was not recorded. Installing it does
+    not make retraining reproduce the frozen model.
+- [Secret key](glossary.md#secret-key) in `.env` (template: `.env.example`).
 
 **How to run.**
 
 ```bash
 python -m venv venv_trenord
-venv_trenord\Scripts\activate               # Windows; on macOS / Linux: source venv_trenord/bin/activate
-pip install -r requirements-notebooks.txt   # notebooks
-pip install -r requirements.txt             # dashboard
-cp .env.example .env                        # then set PSEUDO_KEY to a long random string
-# Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04b (04a only to retrain, see below)
-streamlit run dashboard/app.py              # from the repository root
-pytest tests/                               # dashboard smoke tests, from the repository root
+venv_trenord\Scripts\activate                   # Windows; on macOS / Linux: source venv_trenord/bin/activate
+pip install -r requirements-notebooks.txt       # notebooks (or requirements-notebooks.lock.txt for the full environment)
+pip install -r requirements.txt                 # dashboard
+cp .env.example .env                            # then replace change_me with the output of:
+python -c "import secrets; print(secrets.token_hex(32))"
+# Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04a (frozen mode) → 04b
+streamlit run dashboard/app.py                  # from the repository root
+pytest tests/                                   # dashboard smoke tests, from the repository root
 ```
 
 The tests need only `requirements.txt` and `pytest` (pinned in `requirements-notebooks.txt`). GitHub Actions runs
 them on every push and pull request to `main` (`.github/workflows/tests.yml`).
 
+**Your own key.** Everyone who reruns 01b needs their own key, generated as above. A different key gives different
+`review_id` values and nothing else: no step uses the id as an input. On 2026-11-02 the key was rotated and
+01b → 04b rerun (04a in frozen mode). Every `review_id` changed. All other columns of every output were identical,
+as were the topic of every review, the 13 labels with their sizes, the six charts (byte-identical) and
+`bertopic_model_final`.
+
 **Deterministic steps.**
 - 01b, given the same raw file and key.
 - 02, for fixed library versions.
 - 03.
+- 04a in frozen mode, which only reads the frozen model.
 - 04b, which loads the frozen model; its outputs were identical across consecutive runs.
-- 04a was verified once to be reproducible on the same machine (§7).
 
 **Non-deterministic steps.**
 - 01 depends on the live store.
-- 04a may differ across hardware or library versions.
+- 04a with `RETRAIN = True`. An earlier version of this document called retraining reproducible, but that held
+  only within the same environment. In the environment where the model was trained, retraining matched the frozen
+  model exactly (2026-11-01). After the venv was rebuilt, retraining with the same code and data gave a different
+  clustering (2026-11-02):
+  - 6,428 of 6,951 rows had a different topic id;
+  - 92.1% of rows agreed under the best matching between old and new topics;
+  - the adjusted Rand index was 0.81 (§7).
 
 **Why 04a must not be retrained without rebuilding the label map.** The label map refers to the topic ids and sizes
 of the frozen model. A retrained model can number and size its topics differently, so labels would attach to the
 wrong reviews. The guard in 04b stops with an error in that case.
 
 **What a fresh clone can reproduce.** The frozen BERTopic model, the raw data and the intermediate CSVs are not
-published, so on a fresh clone 04b cannot run as is. Rerunning 04a may produce different topic ids, which the guard
-in 04b catches. Someone cloning the repository can therefore run the dashboard on the published CSVs, inspect every
-notebook with its saved outputs, and rerun the whole pipeline on a new scrape with their own key. They cannot
-regenerate the published topics and labels exactly without the original raw data and the frozen model.
+published, so on a fresh clone 04a (frozen mode) and 04b cannot run as is. Retraining 04a would produce different
+topic ids, which the guard in 04b catches. Someone cloning the repository can:
+- run the dashboard on the published CSVs;
+- inspect every notebook with its saved outputs;
+- rerun the whole pipeline on a new scrape with their own key.
+
+They cannot regenerate the published topics and labels exactly without the original raw data and the frozen model.
 
 ---
 
@@ -656,7 +730,7 @@ regenerate the published topics and labels exactly without the original raw data
 | Anon, clean and topics CSVs | local only, gitignored |
 | BERTopic models | local only, gitignored |
 | Manual labeling notes (`labeling/`, contain review texts) | local only, gitignored |
-| Secret key (`.env`) | local only, gitignored; `.env.example` holds a placeholder |
+| Secret key (`.env`) | local only, gitignored and never committed; rotated on 2026-11-02; `.env.example` holds a placeholder |
 | Labeled, analysis and top-reviews CSVs | published: review text, rating, date, app version and developer reply; no author, pseudonymised id |
 | Charts | published (aggregates only) |
 
@@ -666,8 +740,12 @@ regenerate the published topics and labels exactly without the original raw data
 - Author names are dropped in 01b and never reach a later file.
 - Ticket-like codes in the text are masked.
 
-**Notebook outputs.** The notebooks print only counts and aggregates. No review texts, names or keys appear in any
-saved output.
+**Key rotation (2026-11-02).** A new key was generated with `secrets.token_hex(32)` and stored only in the local
+`.env`. It is not in the repository, in any notebook output or in any document. The pipeline was rerun, so every
+published `review_id` comes from the new key. Ids published before the rotation cannot be linked to the new ones.
+
+**Notebook outputs.** The notebooks print only counts, aggregates and, in 01b, a preview of non-text columns. A scan
+of all saved outputs after the 2026-11-02 rerun found no key, review or reply text, author name or local path.
 
 ---
 
@@ -691,7 +769,7 @@ All Italian reviews: 6,951 rows, 21 columns, one row per review.
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
-| `review_id` | string | Pseudonymised review id: HMAC-SHA256 of the store id with `PSEUDO_KEY`, first 12 hex characters (§4). Unique. | `8ead70387d45`, `028affa8a474` |
+| `review_id` | string | Pseudonymised review id: HMAC-SHA256 of the store id with `PSEUDO_KEY`, first 12 hex characters (§4). Unique. Changes if the key changes. | `e0441c09f9ba`, `525ab22d4722` |
 | `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
 | `text` | string | Review text as published on the store, with ticket-like codes masked (§4). | — |
 | `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |
@@ -720,7 +798,7 @@ This is the main file of the dashboard.
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
-| `review_id` | string | Pseudonymised review id, 12 hex characters. Unique. | `8ead70387d45`, `028affa8a474` |
+| `review_id` | string | Pseudonymised review id, 12 hex characters. Unique. | `e0441c09f9ba`, `525ab22d4722` |
 | `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
 | `text` | string | Review text, with ticket-like codes masked. | — |
 | `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |

@@ -49,7 +49,17 @@ streamlit run dashboard/app.py
 
 To run the tests: `pip install pytest`, then `pytest tests/` from the repository root.
 
-To run the full pipeline, see [Reproducibility in docs/architecture.md](docs/architecture.md#10-reproducibility).
+To run the notebooks, install their dependencies and create `.env` with your own pseudonymization key:
+
+```bash
+pip install -r requirements-notebooks.txt   # or requirements-notebooks.lock.txt for the full pinned environment
+cp .env.example .env                        # then replace change_me with the output of:
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Never commit `.env`. A different key gives different `review_id` values but identical topics and results. The lock
+file records today's environment, not the one in which the frozen topic model was trained. For the full pipeline,
+see [Reproducibility in docs/architecture.md](docs/architecture.md#10-reproducibility).
 
 ## Data and privacy
 
