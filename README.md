@@ -1,5 +1,7 @@
 # Trenord App Reviews: Topic Modeling with BERTopic
 
+[![tests](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml/badge.svg)](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml)
+
 What do users complain about, and what do they appreciate, in the Trenord train app? This project collects
 the app's public Google Play reviews, pseudonymizes them, groups the Italian reviews into topics with BERTopic,
 and publishes the results in an interactive Streamlit dashboard.
@@ -9,6 +11,7 @@ and publishes the results in an interactive Streamlit dashboard.
 - **Dashboard:** https://trenord-review-analysis.streamlit.app
 - **Technical documentation:** [docs/architecture.md](docs/architecture.md)
 - **Glossary:** [docs/glossary.md](docs/glossary.md)
+- **Data dictionary:** [columns of the published CSVs](docs/architecture.md#13-data-dictionary)
 
 ## Key findings
 
@@ -26,11 +29,13 @@ Python 3.13 · pandas · spaCy · lingua · BERTopic (sentence-transformers, UMA
 ## Repository structure
 
 ```
+.github/          GitHub Actions workflow that runs the tests
 dashboard/        Streamlit app and its stopword list
 data/processed/   published CSVs read by the dashboard
 docs/             technical documentation and glossary
 notebooks/        pipeline: scraping → anonymization → cleaning → analysis → topic modeling
 reports/figures/  charts from the analysis and the dashboard screenshot
+tests/            dashboard smoke tests (Streamlit AppTest)
 ```
 
 ## Quick start
@@ -41,6 +46,8 @@ venv_trenord\Scripts\activate        # macOS / Linux: source venv_trenord/bin/ac
 pip install -r requirements.txt
 streamlit run dashboard/app.py
 ```
+
+To run the tests: `pip install pytest`, then `pytest tests/` from the repository root.
 
 To run the full pipeline, see [Reproducibility in docs/architecture.md](docs/architecture.md#10-reproducibility).
 
@@ -54,3 +61,10 @@ Details: [Privacy and data handling](docs/architecture.md#11-privacy-and-data-ha
 
 The code is MIT-licensed ([LICENSE](LICENSE)); the license does not cover the review data, whose rights remain
 with their authors and the platform.
+
+## Author
+
+Paolo Troia
+
+- LinkedIn: [LINKEDIN_URL]
+- Blog: [BLOG_URL]

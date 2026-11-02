@@ -23,3 +23,6 @@ torch==2.11.0
 umap-learn==0.5.12
 hdbscan==0.8.42
 scikit-learn==1.8.0
+
+# Tests (dashboard smoke tests in tests/)
+pytest==9.2.0

@@ -595,7 +595,7 @@ all 4 tabs rendered:
 - Praise only (no Problem topics);
 - 5★ only (no negative reviews).
 
-The test passed on Python 3.13 and 3.14.
+The test passed on Python 3.13 and 3.14. The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 
 ---
 
@@ -619,7 +619,11 @@ pip install -r requirements.txt             # dashboard
 cp .env.example .env                        # then set PSEUDO_KEY to a long random string
 # Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04b (04a only to retrain, see below)
 streamlit run dashboard/app.py              # from the repository root
+pytest tests/                               # dashboard smoke tests, from the repository root
 ```
+
+The tests need only `requirements.txt` and `pytest` (pinned in `requirements-notebooks.txt`). GitHub Actions runs
+them on every push and pull request to `main` (`.github/workflows/tests.yml`).
 
 **Deterministic steps.**
 - 01b, given the same raw file and key.
@@ -672,3 +676,82 @@ saved output.
 - **Aspect-based sentiment analysis**, to capture several issues and opinions within one review instead of one
   topic per review.
 - **Analysis of the developer replies**: their content, response time, and effect on later ratings.
+
+---
+
+## 13. Data dictionary
+
+The three published CSVs in `data/processed/`, written by 04b with `encoding="utf-8-sig"` and `index=False`.
+Types are as read by `pandas.read_csv`. "Empty" means an empty cell, read as `NaN`. Columns that hold review or
+reply text, or text derived from it, have no example values.
+
+### `trenord_reviews_labeled.csv`
+
+All Italian reviews: 6,951 rows, 21 columns, one row per review.
+
+| Column | Type | Description | Example values |
+|---|---|---|---|
+| `review_id` | string | Pseudonymised review id: HMAC-SHA256 of the store id with `PSEUDO_KEY`, first 12 hex characters (§4). Unique. | `8ead70387d45`, `028affa8a474` |
+| `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
+| `text` | string | Review text as published on the store, with ticket-like codes masked (§4). | — |
+| `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |
+| `app_version` | string | App version the review was written with. Empty when the store does not report it (496 rows). | `4.12.0`, `4.16.7`, `5.0.7` |
+| `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`, from 2015-05-05 to 2026-08-04. | `2026-08-03 17:29:22` |
+| `has_reply` | bool | Whether the developer replied. | `True`, `False` |
+| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (4,095 rows). | — |
+| `reply_date` | string | Reply date and time, `YYYY-MM-DD HH:MM:SS`. Empty when `has_reply` is `False`. | `2015-06-20 13:15:12`, `2026-07-20 11:04:11` |
+| `year` | int | Year of `date`, 2015–2026. | `2015`, `2025`, `2026` |
+| `month` | int | Month of `date`, 1–12. | `1`, `8`, `12` |
+| `day_of_week` | string | Weekday of `date`, in English. | `Monday`, `Sunday` |
+| `year_month` | string | `YYYY-MM` of `date`. | `2015-05`, `2026-08` |
+| `language` | string | Language detected by lingua (§5). Always `it` in this file. | `it` |
+| `text_clean` | string | Lowercased text without URLs, symbols and extra spaces (§5). Input to BERTopic (§7). | — |
+| `word_count` | int | Number of words in the original `text`, 1–278. | `17`, `45`, `63` |
+| `text_lemmatized` | string | Lemmas without stopwords (§5), used by the dashboard's Words tab. Empty when no token survives (49 rows). | — |
+| `topic` | int | Topic id of the frozen BERTopic model, 0–29 (§7). | `0`, `2`, `22` |
+| `topic_label` | string | One of the 13 topic labels, or `EXCLUDE` for topics without specific content (§8). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
+| `category` | string | Maalej category of the label: `Problem`, `Praise` or `Other`. Empty for `EXCLUDE` rows (905 rows). | `Problem`, `Praise`, `Other` |
+| `topic_merged` | int | Topic id after the merges in 04b, 0–22, renumbered by size. Not stable across retrainings; use `topic_label`. | `0`, `1`, `14` |
+
+### `trenord_reviews_analysis.csv`
+
+The informative reviews: `trenord_reviews_labeled.csv` without the `EXCLUDE` rows. 6,046 rows, the same 21 columns.
+This is the main file of the dashboard.
+
+| Column | Type | Description | Example values |
+|---|---|---|---|
+| `review_id` | string | Pseudonymised review id, 12 hex characters. Unique. | `8ead70387d45`, `028affa8a474` |
+| `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
+| `text` | string | Review text, with ticket-like codes masked. | — |
+| `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |
+| `app_version` | string | App version. Empty when not reported (408 rows). | `4.16.7`, `5.0.6`, `5.0.7` |
+| `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`, from 2015-05-05 to 2026-08-04. | `2026-08-03 17:29:22` |
+| `has_reply` | bool | Whether the developer replied (2,414 rows `True`). | `True`, `False` |
+| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (3,632 rows). | — |
+| `reply_date` | string | Reply date and time. Empty when `has_reply` is `False`. | `2015-06-20 13:15:12`, `2026-07-20 11:04:11` |
+| `year` | int | Year of `date`, 2015–2026. | `2015`, `2025`, `2026` |
+| `month` | int | Month of `date`, 1–12. | `1`, `8`, `12` |
+| `day_of_week` | string | Weekday of `date`, in English. | `Monday`, `Sunday` |
+| `year_month` | string | `YYYY-MM` of `date`. | `2015-05`, `2026-08` |
+| `language` | string | Detected language. Always `it`. | `it` |
+| `text_clean` | string | Lowercased, cleaned text. | — |
+| `word_count` | int | Number of words in the original `text`, 1–278. | `17`, `45`, `63` |
+| `text_lemmatized` | string | Lemmas without stopwords. Empty when no token survives (10 rows). | — |
+| `topic` | int | Frozen topic id; the 20 ids kept by the label map (§8). | `0`, `2`, `22` |
+| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Real-time Train Info`, `Subscription Issues` |
+| `category` | string | `Problem`, `Praise` or `Other`. Never empty. | `Problem`, `Praise`, `Other` |
+| `topic_merged` | int | Post-merge topic id; 13 distinct values in 0–18, one per label. | `0`, `1`, `14` |
+
+### `top_reviews_per_topic.csv`
+
+The 5 most upvoted reviews with at least one upvote for each of the 13 topics, shown in Deep Dive: 65 rows,
+6 columns.
+
+| Column | Type | Description | Example values |
+|---|---|---|---|
+| `topic_label` | string | Topic label, 5 rows each. | `App Stability & Crashes`, `Login & Account` |
+| `category` | string | Category of the topic: `Problem` (45 rows), `Praise` (10) or `Other` (10). | `Problem`, `Praise` |
+| `rating` | int | Star rating, 1–5. | `1`, `3`, `5` |
+| `thumbs_up` | int | Helpful votes, 1–87; the ranking key within each topic. | `23`, `53`, `64` |
+| `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`. | `2021-09-15 06:12:06`, `2023-07-02 17:12:43` |
+| `text` | string | Review text, with ticket-like codes masked. | — |

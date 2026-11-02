@@ -5,6 +5,7 @@ data/processed/bertopic_model_final/
 data/processed/trenord_reviews_topics.csv
 data/processed/trenord_reviews_clean.csv
 __pycache__/
+.pytest_cache/
 .ipynb_checkpoints/
 *.pt
 *.bin
