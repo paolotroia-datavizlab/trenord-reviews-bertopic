@@ -46,7 +46,6 @@ flowchart TD
     CLEAN --> N04b["04b training"]
     N04b --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
     N04b --> MODEL[("bertopic_model<br/>local only")]
-    TOPICS -.->|"check for min_cluster_size=30"| N04a
     TOPICS --> N04c["04c labeling and export"]
     MODEL --> N04c
     N04c --> LAB[("trenord_reviews_labeled.csv")]
@@ -350,8 +349,7 @@ the resulting topics look. It checks two choices: how big a group of reviews mus
 many topics a keyword must appear in to be kept. It saves no model and no file.
 
 ### Input and output
-- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`, and `trenord_reviews_topics.csv` for the
-  reproducibility check.
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`. The notebook reads no other file.
 - Output: tables of metrics in the notebook only.
 
 ### Method
@@ -368,10 +366,9 @@ many topics a keyword must appear in to be kept. It saves no model and no file.
    - outliers before reduction, size of the largest topic after reduction;
    - topic words not found in any single review, and empty keyword slots, which BERTopic adds when a topic has
      fewer than 10 keywords.
-5. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 8-9), and check that the run with 30
-   reproduces `topics.csv` (cell 10).
-6. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 12-14), check that every review keeps the same
-   topic (cell 13) and show the top 5 keywords of five topics side by side (cell 15). The five topics were chosen so
+5. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 8-9).
+6. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 11-13), check that every review keeps the same
+   topic (cell 12) and show the top 5 keywords of five topics side by side (cell 14). The five topics were chosen so
    that no keyword shown is a personal name or a code.
 
 ### Results: `min_cluster_size` (`min_df=5`)
@@ -392,7 +389,8 @@ many topics a keyword must appear in to be kept. It saves no model and no file.
 | 2 | 0.409 | 0.863 | 0 | 20 |
 | 5 | 0.419 | 0.783 | 0 | 0 |
 
-The three `min_df` values give the same topic to every review, and `min_df=5` gives the same topics as 04b.
+The three `min_df` values give the same topic to every review, and `min_df=5` gives the same topics as the
+`min_cluster_size=30` run of the first table.
 
 ### What `min_df` counts
 BERTopic fits the [CountVectorizer](glossary.md#countvectorizer) on one joined text per topic, not on the reviews
@@ -423,8 +421,9 @@ from these pairs and from rare variants, which count as different strings.
     topics, which leaves empty keyword slots. If the number of topics is reduced a lot, `min_df` should go down too.
 
 ### Validation
-- The run with `min_cluster_size=30` gives the same number of topics, the same size per topic and the same topic
-  for every review as `topics.csv` from 04b.
+- One-time validation (2026-11-02): the run with `min_cluster_size=30` was compared once with the 04b model
+  (`topics.csv`) and gave the same number of topics, the same size per topic and the same topic for every review.
+  The check is not part of the notebook, so 04a depends only on `trenord_reviews_clean.csv`.
 - The notebook prints only metrics and keywords, no review texts.
 
 ### Known limitations
@@ -507,7 +506,7 @@ review. In the recorded environment, training again gives exactly the same group
 - 30 topics, with sizes from 52 to 1,214 reviews; 1,601 outliers before reduction, 0 after.
 - **Retraining is reproducible in the locked environment.** Consecutive trainings on 2026-11-02 gave the same topic
   for every review, the same sizes and the same keyword weights. The run with `min_cluster_size=30` in 04a, with
-  precomputed embeddings, also gives the same topic for every review.
+  precomputed embeddings, was checked once against this model and gave the same topic for every review (§7).
 
 ### Known limitations
 - Each review gets one topic, although many mention several issues.
