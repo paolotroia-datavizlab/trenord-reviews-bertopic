@@ -14,3 +14,4 @@ __pycache__/
 data/processed/trenord_reviews_anon.csv
 labeling/
 .claude/
+study/

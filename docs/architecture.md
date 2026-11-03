@@ -353,23 +353,35 @@ many topics a keyword must appear in to be kept. It saves no model and no file.
 - Output: tables of metrics in the notebook only.
 
 ### Method
-1. Load the Italian reviews with the same filter, order and empty-text handling as 04b (cell 3).
+04a trains the same pipeline that 04b later uses, with the values chosen here. It does not read anything produced
+by 04b.
+
+1. Load the Italian reviews with the same filter, order and empty-text handling that 04b uses (cell 3).
 2. Compute the sentence embeddings once and reuse them in every run, since they do not depend on the settings
    compared (cell 4).
 3. Split every review with the same analyzer that produces the keywords (Italian stopwords removed, single words and
-   bigrams) and build a gensim `Dictionary` for coherence (cell 5).
-4. Train the 04b pipeline (UMAP, HDBSCAN, CountVectorizer, MMR, outlier reduction, `update_topics`) and compute the
-   metrics for each setting (cell 6):
+   bigrams) and build a gensim `Dictionary` for coherence. The cell prints the tokens of a made-up sentence as an
+   example (cell 5).
+4. Define `train_topic_model(min_cluster_size, min_df)`, which trains the pipeline (UMAP, HDBSCAN, CountVectorizer,
+   MMR, outlier reduction, `update_topics`) with fresh model objects and returns the model and the topics before
+   and after outlier reduction (cell 6).
+5. Draw the reviews reduced to 2 dimensions with UMAP for `n_neighbors` 5, 15 and 50, as an illustration of that
+   setting (cell 7).
+6. Train one trial model with `min_cluster_size=30` and `min_df=5`, and print its topic 0 keywords and outlier
+   counts (cell 8).
+7. Define one function per metric and try each on the trial model:
+   - outliers before reduction (cell 9);
+   - size of the largest topic after reduction (cell 10);
+   - the top 10 words of each topic, without empty strings, used by the next two metrics (cell 11);
    - [topic coherence](glossary.md#topic-coherence) c_v with gensim `CoherenceModel(..., coherence="c_v", processes=1)`
-     on the top 10 words of each topic;
-   - [topic diversity](glossary.md#topic-diversity): distinct top words divided by all top words;
-   - outliers before reduction, size of the largest topic after reduction;
-   - topic words not found in any single review, and empty keyword slots, which BERTopic adds when a topic has
-     fewer than 10 keywords.
-5. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 8-9).
-6. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 11-13), check that every review keeps the same
-   topic (cell 12) and show the top 5 keywords of five topics side by side (cell 14). The five topics were chosen so
-   that no keyword shown is a personal name or a code.
+     (cell 12);
+   - [topic diversity](glossary.md#topic-diversity): distinct top words divided by all top words (cell 13).
+8. `compute_metrics` combines the four metrics with two counts: topic words not found in any single review, and
+   empty keyword slots, which BERTopic adds when a topic has fewer than 10 keywords (cell 14).
+9. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 15-16).
+10. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 19 and 21), check that every review keeps the same
+    topic (cell 20) and show the top 5 keywords of five topics side by side (cell 23). The five topics were chosen
+    so that no keyword shown is a personal name or a code.
 
 ### Results: `min_cluster_size` (`min_df=5`)
 
@@ -424,7 +436,7 @@ from these pairs and from rare variants, which count as different strings.
 - One-time validation (2026-11-02): the run with `min_cluster_size=30` was compared once with the 04b model
   (`topics.csv`) and gave the same number of topics, the same size per topic and the same topic for every review.
   The check is not part of the notebook, so 04a depends only on `trenord_reviews_clean.csv`.
-- The notebook prints only metrics and keywords, no review texts.
+- The notebook prints only counts, metrics, keywords and the tokens of one made-up sentence, no review texts.
 
 ### Known limitations
 - Coherence c_v is a proxy. It also rewards near-synonyms and generic words, so the metrics do not replace reading
