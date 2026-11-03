@@ -52,11 +52,16 @@ SERIES_COLORS    = ["#d9534f", "#e8825a", "#f0c040", "#4a90d9", "#7bc67e"]
 # Display style (emoji, badge colour) for known categories.
 # The categories themselves are always read from the data.
 CATEGORY_STYLES = {
-    "Problem": ("🔴", "red"),
-    "Praise":  ("🟢", "green"),
-    "Other":   ("⚪", "gray"),
+    "App Issue":    ("🔴", "red"),
+    "Praise":       ("🟢", "green"),
+    "Rail Service": ("🟠", "orange"),
+    "App Updates":  ("🔵", "blue"),
 }
-DEFAULT_CATEGORY_STYLE = ("🔵", "blue")
+DEFAULT_CATEGORY_STYLE = ("⚪", "gray")
+
+# Categories used by the Key Findings
+ISSUE_CATEGORY  = "App Issue"
+PRAISE_CATEGORY = "Praise"
 
 # Yearly averages and rates are shown only for years with at least this many
 # reviews, so that peaks and trends are not driven by a handful of reviews
@@ -92,7 +97,7 @@ def load_stopwords():
             stopwords.add(word)
     return stopwords
 
-# Informative reviews only — EXCLUDE topics already removed by notebook 04b
+# Informative reviews only — EXCLUDE topics already removed by notebook 04c
 df_analysis    = load_reviews("trenord_reviews_analysis.csv")
 # Top 5 upvoted reviews per topic — used in Deep Dive tab
 df_top_reviews = load_reviews("top_reviews_per_topic.csv")
@@ -430,8 +435,8 @@ with tab1:
     )
 
     all_topics_summary = topic_summary(df_analysis)
-    problem_topics     = all_topics_summary[all_topics_summary["category"] == "Problem"]
-    praise_topics      = all_topics_summary[all_topics_summary["category"] == "Praise"]
+    issue_topics       = all_topics_summary[all_topics_summary["category"] == ISSUE_CATEGORY]
+    praise_topics      = all_topics_summary[all_topics_summary["category"] == PRAISE_CATEGORY]
 
     yearly_full = reliable_years(df_full).groupby("year").agg(
         avg_rating=("rating", "mean"),
@@ -449,13 +454,13 @@ with tab1:
 
     kf1, kf2 = st.columns(2)
     with kf1:
-        if problem_topics.empty:
-            st.info("No Problem topics in the data.")
+        if issue_topics.empty:
+            st.info(f"No {ISSUE_CATEGORY} topics in the data.")
         else:
-            top_problem = problem_topics.loc[problem_topics["count"].idxmax()]
+            top_issue = issue_topics.loc[issue_topics["count"].idxmax()]
             st.error(
-                f"🔴 **Top problem:** {top_problem['topic_label']} — "
-                f"{top_problem['count']:,} reviews, avg rating {top_problem['avg_rating']:.2f}★"
+                f"🔴 **Top app issue:** {top_issue['topic_label']} — "
+                f"{top_issue['count']:,} reviews, avg rating {top_issue['avg_rating']:.2f}★"
             )
         st.error(
             f"🔴 **Average rating {rating_verb}:** from {rating_from:.2f}★ ({first_year}) "
@@ -467,7 +472,7 @@ with tab1:
             f"{last_reply:.0f}% in {last_year}"
         )
         if praise_topics.empty:
-            st.info("No Praise topics in the data.")
+            st.info(f"No {PRAISE_CATEGORY} topics in the data.")
         else:
             top_praise = praise_topics.loc[praise_topics["count"].idxmax()]
             st.success(
@@ -623,19 +628,19 @@ with tab2:
         topic_year_rating = topic_year_rating[topic_year_rating["n_reviews"] >= MIN_REVIEWS_PER_YEAR]
 
         # ── Key Findings (respect filters) ────────────────────
-        problems       = topic_stats[topic_stats["category"] == "Problem"]
+        issues         = topic_stats[topic_stats["category"] == ISSUE_CATEGORY]
         most_discussed = topic_stats.loc[topic_stats["count"].idxmax()]
         best_rated     = topic_stats.loc[topic_stats["avg_rating"].idxmax()]
-        pct_problems   = len(df_filtered[df_filtered["category"] == "Problem"]) / len(df_filtered) * 100
+        pct_issues     = len(df_filtered[df_filtered["category"] == ISSUE_CATEGORY]) / len(df_filtered) * 100
 
         kf1, kf2 = st.columns(2)
         with kf1:
-            if problems.empty:
-                st.info("No Problem topics with the current filters.")
+            if issues.empty:
+                st.info(f"No {ISSUE_CATEGORY} topics with the current filters.")
             else:
-                most_critical = problems.loc[problems["avg_rating"].idxmin()]
-                st.error(f"🔴 **Most critical:** {most_critical['topic_label']} — avg {most_critical['avg_rating']:.2f}★")
-            st.error(f"🔴 **{pct_problems:.0f}% of reviews** belong to Problem topics")
+                most_critical = issues.loc[issues["avg_rating"].idxmin()]
+                st.error(f"🔴 **Most critical app issue:** {most_critical['topic_label']} — avg {most_critical['avg_rating']:.2f}★")
+            st.error(f"🔴 **{pct_issues:.0f}% of reviews** belong to {ISSUE_CATEGORY} topics")
         with kf2:
             st.warning(f"🟡 **Most discussed:** {most_discussed['topic_label']} — {most_discussed['count']:,} reviews")
             st.success(f"🟢 **Best rated:** {best_rated['topic_label']} — avg {best_rated['avg_rating']:.2f}★")

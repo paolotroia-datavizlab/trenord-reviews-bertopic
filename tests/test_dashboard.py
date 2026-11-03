@@ -72,11 +72,11 @@ def test_deep_dive_topic(topic):
 
 
 def test_zero_rows():
-    # 2015, 1★, Other: a combination with no reviews
+    # 2015, 1★, App Updates: a combination with no reviews
     def setup(at):
         at.sidebar.slider[0].set_value((2015, 2015))
         uncheck_ratings(at, keep=[1])
-        uncheck_categories(at, keep="Other")
+        uncheck_categories(at, keep="App Updates")
     assert_renders(run_app(setup))
 
 
@@ -88,7 +88,7 @@ def test_incomplete_year_only():
 
 
 def test_praise_only():
-    # No Problem topics, so no negative-review words
+    # No App Issue topics, so the issue findings fall back to their messages
     assert_renders(run_app(lambda at: uncheck_categories(at, keep="Praise")))
 
 

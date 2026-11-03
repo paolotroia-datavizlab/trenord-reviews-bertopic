@@ -25,7 +25,8 @@ train status, buy tickets and renew subscriptions. The project asks:
 The study uses the public Google Play Store reviews:
 - ratings and developer replies are analysed over time;
 - the Italian review texts are grouped into topics with [BERTopic](glossary.md#bertopic);
-- each topic is labeled and classified with the [Maalej taxonomy](glossary.md#maalej-taxonomy).
+- each topic gets a label and one of four [categories](glossary.md#category): App Issue, Praise, Rail Service and
+  App Updates.
 
 ### Data flow
 
@@ -40,15 +41,18 @@ flowchart TD
     N02 --> CLEAN[("trenord_reviews_clean.csv<br/>local only")]
     CLEAN --> N03["03 analysis"]
     N03 --> PNG["six charts in reports/figures"]
-    CLEAN --> N04a["04a topics, frozen mode"]
-    N04a --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
-    MODEL[("bertopic_model, frozen<br/>local only")] -.->|"topics_"| N04a
-    TOPICS --> N04b["04b labeling and export"]
-    MODEL --> N04b
-    N04b --> LAB[("trenord_reviews_labeled.csv")]
-    N04b --> ANA[("trenord_reviews_analysis.csv")]
-    N04b --> TOP[("top_reviews_per_topic.csv")]
-    N04b --> FINAL[("bertopic_model_final<br/>local only")]
+    CLEAN --> N04a["04a model selection"]
+    N04a --> TABLES["metric tables, no files"]
+    CLEAN --> N04b["04b training"]
+    N04b --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
+    N04b --> MODEL[("bertopic_model<br/>local only")]
+    TOPICS -.->|"check for min_cluster_size=30"| N04a
+    TOPICS --> N04c["04c labeling and export"]
+    MODEL --> N04c
+    N04c --> LAB[("trenord_reviews_labeled.csv")]
+    N04c --> ANA[("trenord_reviews_analysis.csv")]
+    N04c --> TOP[("top_reviews_per_topic.csv")]
+    N04c --> FINAL[("bertopic_model_final<br/>local only")]
     LAB --> DASH["dashboard/app.py, Streamlit"]
     ANA --> DASH
     TOP --> DASH
@@ -64,11 +68,12 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `trenord_reviews_anon.csv` | 01b | no |
 | `trenord_reviews_clean.csv` | 02 | no |
 | `reports/figures/chart_*.png` (6 charts) | 03 | yes |
-| `reports/figures/dashboard_overview.png` (dashboard screenshot) | — | yes |
-| `trenord_reviews_topics.csv` | 04a | no |
-| `bertopic_model/` (frozen; rewritten only with `RETRAIN = True`) | 04a | no |
-| `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 04b | yes |
-| `bertopic_model_final/` | 04b | no |
+| `reports/figures/dashboard_overview.png` (dashboard screenshot) | - | yes |
+| none (metric tables in the notebook only) | 04a | - |
+| `trenord_reviews_topics.csv` | 04b | no |
+| `bertopic_model/` | 04b | no |
+| `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 04c | yes |
+| `bertopic_model_final/` | 04c | no |
 
 All CSVs are written with `encoding="utf-8-sig"` and `index=False`.
 
@@ -87,7 +92,7 @@ This table is the single source of numbers for the article. **All languages** fi
 | Store ratings at scraping time / reviews collected | 16,787 / 7,329 (coverage **43.7%**) |
 | Raw → anon → clean (rows × columns) | 7,329 × 10 → 7,329 × 9 → 7,329 × 17 |
 | Language split | Italian 6,951 · unknown 363 · other languages 15 |
-| Topics file / labeled / analysis / top reviews | 6,951 × 18 / 6,951 × 21 / 6,046 × 21 / 65 × 6 |
+| Topics file / labeled / analysis / top reviews | 6,951 × 18 / 6,951 × 21 / 5,998 × 21 / 65 × 6 |
 
 ### Ratings and replies
 
@@ -97,24 +102,25 @@ This table is the single source of numbers for the article. **All languages** fi
 | Average rating | **2.26** | **2.17** |
 | Average rating, first → last complete year | 3.56 (2015) → 1.57 (2025) | 3.54 (2015) → 1.52 (2025) |
 | Developer reply rate, overall | 41.6% (3,052 reviews) | 41.1% |
-| Reply rate 2015–2020 | 83–100% each year | 83–100% each year (peak 100%, 2016) |
+| Reply rate 2015-2020 | 83-100% each year | 83-100% each year (peak 100%, 2016) |
 | Reply rate 2021 → 2025 | 32.5% → 1.6% (below 4% every year from 2022) | 32.1% → 1.7% (below 4% every year from 2022) |
 
 ### Topics
 
 | Measure | Value |
 |---|---|
-| Topics found by the model | 30 (1,609 [outliers](glossary.md#outlier) reassigned) |
-| Topics after [merging](glossary.md#topic-merge) / final labels | 23 / 13 |
-| Excluded | 10 topics, 905 reviews (**13.0%** of Italian reviews) |
-| Analysis set | 6,046 reviews |
-| Category split | Problem 5,107 (84.5%) · Praise 769 (12.7%) · Other 170 (2.8%) · Feature Request 0 |
-| Bias check: average rating | excluded 3.67 · included 1.94 · all Italian 2.17 |
-| Bias check: share of 4–5★ | excluded 68.2% · included 19.1% |
+| Model settings chosen in 04a | `min_cluster_size=30`, `min_df=5` |
+| Topics found by the model | 30 (1,601 [outliers](glossary.md#outlier) reassigned) |
+| Topics after [merging](glossary.md#topic-merge) / final labels | 22 / 13 |
+| Excluded | 9 topics, 953 reviews (**13.7%** of Italian reviews) |
+| Analysis set | 5,998 reviews |
+| Category split | App Issue 5,090 (84.9%) · Praise 740 (12.3%) · Rail Service 87 (1.5%) · App Updates 81 (1.4%) |
+| Bias check: average rating | excluded 3.66 · included 1.93 · all Italian 2.17 |
+| Bias check: share of 4-5★ | excluded 67.7% · included 18.8% |
 
 ---
 
-## 3. Notebook 01 — Scraping
+## 3. Notebook 01 - Scraping
 
 **In plain words.** This notebook downloads the public reviews of the Trenord app from the Google Play Store and
 saves them in a file, exactly as received. Nothing is changed at this stage, so every later step can be traced back
@@ -167,7 +173,7 @@ to the original data.
 
 ---
 
-## 4. Notebook 01b — Anonymization
+## 4. Notebook 01b - Anonymization
 
 **In plain words.** This notebook removes the reviewers' names and replaces each review's original identifier with
 a code that cannot be traced back without a secret key. It is the only step that touches the original file, so
@@ -186,7 +192,7 @@ everything after it works on protected data.
   `load_dotenv()` adds its variables to the environment, where `os.getenv("PSEUDO_KEY")` reads them.
 - **Key check.** The notebook stops before hashing if the key is missing, empty or still `change_me`: ids hashed
   with a known key could be recomputed by anyone from the public store ids.
-- **Rotation.** The key was rotated on 2026-11-02 and the pipeline rerun (§10). Every published `review_id` changed;
+- **Rotation.** The key was rotated on 2026-11-02 and the pipeline rerun (§11). Every published `review_id` changed;
   nothing else did.
 
 ### Method
@@ -199,7 +205,7 @@ everything after it works on protected data.
    - `MIXED_CODE_PATTERN = r"\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{8,}\b"`
    - `DIGIT_CODE_PATTERN = r"(?<!\d)\d{8,}(?!\d)"`
 4. Drop `author` (cell 5).
-5. Run the checks; the output is saved only if all of them pass (cells 6–7).
+5. Run the checks; the output is saved only if all of them pass (cells 6-7).
 6. Preview the first rows of `review_id, rating, thumbs_up, app_version, date, has_reply` (cell 8). Text and reply
    columns are left out because notebook outputs are published.
 
@@ -221,7 +227,7 @@ everything after it works on protected data.
 - **Reply text left intact.** An earlier version also removed reviewer names from `reply_text`. That step was
   dropped: the reply is kept identical to the text published on the store, and this is verified row by row.
 
-### Validation (final run, after the key rotation)
+### Validation (final run)
 
 | Check | Result |
 |---|---|
@@ -232,6 +238,7 @@ everything after it works on protected data.
 | `reply_text` identical to raw for every row | PASS (0 rows different; 3,052 non-null replies in both) |
 | `[CODE]` replacements in `text` | 5 |
 | Compared with the run before the rotation | every `review_id` different, no id shared; all other columns identical |
+| Rerun with the same key (2026-11-03) | `trenord_reviews_anon.csv` identical to the previous run, ids unchanged |
 
 ### Known limitations
 - Reviewers may write personal information in the text; only ticket-like codes are masked.
@@ -240,7 +247,7 @@ everything after it works on protected data.
 
 ---
 
-## 5. Notebook 02 — Cleaning
+## 5. Notebook 02 - Cleaning
 
 **In plain words.** This notebook prepares the reviews for analysis. It works out the language of each review,
 removes symbols and links from the text, and reduces words to their basic form, so that "bought" and "buying"
@@ -278,8 +285,8 @@ count as the same word.
 ### Design decisions
 - **Two-level language detection.** A single threshold was rejected: a strict one discards short Italian reviews,
   and a loose one admits other languages at low confidence.
-- **Two text versions.** `text_clean` keeps natural word order for the [embeddings](glossary.md#embedding) (04a); `text_lemmatized` groups
-  word variants for frequency analyses (dashboard).
+- **Two text versions.** `text_clean` keeps natural word order for the [embeddings](glossary.md#embedding) (04a, 04b);
+  `text_lemmatized` groups word variants for frequency analyses (dashboard).
 
 ### Validation (final run)
 - The language split is in Key numbers.
@@ -293,7 +300,7 @@ count as the same word.
 
 ---
 
-## 6. Notebook 03 — Exploratory analysis
+## 6. Notebook 03 - Exploratory analysis
 
 **In plain words.** This notebook describes the reviews as a whole: how many stars people give, how this changed
 over the years, and how often the company answered. It produces six charts.
@@ -313,7 +320,7 @@ Overall figures are in Key numbers (all languages column).
 1. Overview: median rating 1.0, 20 words per review on average (cell 3).
 2. Rating distribution: 1★ 4,075 · 2★ 745 · 3★ 454 · 4★ 654 · 5★ 1,401 (cell 5).
 3. Reviews per year: the peak is in 2019 (1,086 reviews); 2026 is incomplete (326 reviews) (cell 6).
-4. Average rating over time, with the y axis fixed at 1–5. The chart annotates the most recent yearly drop of at
+4. Average rating over time, with the y axis fixed at 1-5. The chart annotates the most recent yearly drop of at
    least 0.5★, computed from the data: 2022 → 2023, −0.78 (cell 7).
 5. Reply rate overall (cell 9) and by rating: it rises from 29.0% (1★) to 70.9% (4★), then falls to 60.1% at 5★
    (cell 10).
@@ -321,7 +328,7 @@ Overall figures are in Key numbers (all languages column).
 7. Most upvoted reviews, shown as metadata only: upvotes, rating, date, length (cell 13).
 
 ### Design decisions
-- **Line charts for averages and rates.** Bars would suggest a zero baseline. The y axis covers the full 1–5 scale.
+- **Line charts for averages and rates.** Bars would suggest a zero baseline. The y axis covers the full 1-5 scale.
 - **Incomplete year in grey and dashed**, so it is not read as a real decline.
 - **The star rating is the sentiment signal.** It is available for every review and given by the author. A separate
   sentiment classifier was considered unnecessary.
@@ -336,53 +343,128 @@ The charts are regenerated from the data at every run; no number in them is hard
 
 ---
 
-## 7. Notebook 04a — Topic model training
+## 7. Notebook 04a - Model selection
 
-**In plain words.** This notebook reads the Italian reviews and lets an algorithm group together the reviews that
-talk about similar things, without being told the themes in advance. The result was saved once and is kept
-unchanged, because the human labels given to each group later depend on it. Normally the notebook does not train
-again: it reads the saved model and writes out the group of each review.
+**In plain words.** Before training the final model, this notebook tries several settings and measures how good
+the resulting topics look. It checks two choices: how big a group of reviews must be to count as a topic, and how
+many topics a keyword must appear in to be kept. It saves no model and no file.
 
 ### Input and output
-- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`; in frozen mode also `bertopic_model/`.
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`, and `trenord_reviews_topics.csv` for the
+  reproducibility check.
+- Output: tables of metrics in the notebook only.
+
+### Method
+1. Load the Italian reviews with the same filter, order and empty-text handling as 04b (cell 3).
+2. Compute the sentence embeddings once and reuse them in every run, since they do not depend on the settings
+   compared (cell 4).
+3. Split every review with the same analyzer that produces the keywords (Italian stopwords removed, single words and
+   bigrams) and build a gensim `Dictionary` for coherence (cell 5).
+4. Train the 04b pipeline (UMAP, HDBSCAN, CountVectorizer, MMR, outlier reduction, `update_topics`) and compute the
+   metrics for each setting (cell 6):
+   - [topic coherence](glossary.md#topic-coherence) c_v with gensim `CoherenceModel(..., coherence="c_v", processes=1)`
+     on the top 10 words of each topic;
+   - [topic diversity](glossary.md#topic-diversity): distinct top words divided by all top words;
+   - outliers before reduction, size of the largest topic after reduction;
+   - topic words not found in any single review, and empty keyword slots, which BERTopic adds when a topic has
+     fewer than 10 keywords.
+5. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 8-9), and check that the run with 30
+   reproduces `topics.csv` (cell 10).
+6. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 12-14), check that every review keeps the same
+   topic (cell 13) and show the top 5 keywords of five topics side by side (cell 15). The five topics were chosen so
+   that no keyword shown is a personal name or a code.
+
+### Results: `min_cluster_size` (`min_df=5`)
+
+| `min_cluster_size` | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | Words not found | Empty slots |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 20 | 55 | 26.5% | 14.8% | 0.416 | 0.703 | 0 | 5 |
+| 25 | 37 | 17.8% | 28.6% | 0.421 | 0.684 | 0 | 0 |
+| 30 | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 0 | 0 |
+| 40 | 8 | 1.7% | 85.9% | 0.348 | 0.212 | 0 | 14 |
+| 50 | 6 | 1.8% | 85.9% | 0.497 | 0.192 | 0 | 34 |
+
+### Results: [`min_df`](glossary.md#min_df) (`min_cluster_size=30`)
+
+| `min_df` | Coherence c_v | Diversity | Empty slots | Words not found |
+|---:|---:|---:|---:|---:|
+| 1 | 0.385 | 0.887 | 0 | 49 |
+| 2 | 0.409 | 0.863 | 0 | 20 |
+| 5 | 0.419 | 0.783 | 0 | 0 |
+
+The three `min_df` values give the same topic to every review, and `min_df=5` gives the same topics as 04b.
+
+### What `min_df` counts
+BERTopic fits the [CountVectorizer](glossary.md#countvectorizer) on one joined text per topic, not on the reviews
+(this is how [c-TF-IDF](glossary.md#c-tf-idf) works). So `min_df=5` means "the keyword must appear in at least 5
+topics", not in 5 reviews, and it changes only the keywords: clustering works on the embeddings, and outlier
+reduction on the topic embeddings.
+
+### The fake bigram finding
+With `min_df` 1 and 2, 49 and 20 of the top keywords appear in no single review. Joining the reviews of a topic
+into one text creates [bigrams](glossary.md#bigram) across review boundaries: the last word of one review followed
+by the first word of the next. Short reviews like "ottima" make this common, which gives keywords such as "ottima
+ottima", "ottimo ottimo" and "perfetto ottima"; these three were checked and occur in no review. A joined pair like
+this rarely appears in five topics, so `min_df=5` removes it. The higher diversity of `min_df` 1 and 2 comes largely
+from these pairs and from rare variants, which count as different strings.
+
+### Choice
+- **`min_cluster_size=30`.** Coherence is as high as with 20 and 25, diversity is the highest, there are no empty
+  keyword slots and no topic holds more than a fifth of the reviews.
+  - 25 is the closest alternative: fewer outliers (17.8%), but one topic holds 28.6% of the reviews and more keywords
+    repeat between topics.
+  - 20 splits the reviews into 55 topics with more repeated words.
+  - 40 and 50 collapse: 85.9% of the reviews end up in one topic. The 0.497 coherence of 50 comes from a few generic
+    words shared by a handful of topics, not from better topics.
+- **`min_df=5`.** The keywords are words that really occur in reviews, and coherence is the highest.
+  - The cost: a word found in fewer than five topics is dropped even when it is the most specific one, such as
+    "password" for the login topic.
+  - With few topics, as with 40 and 50, the same threshold is too strict: a word must then appear in 5 of only 8 or 6
+    topics, which leaves empty keyword slots. If the number of topics is reduced a lot, `min_df` should go down too.
+
+### Validation
+- The run with `min_cluster_size=30` gives the same number of topics, the same size per topic and the same topic
+  for every review as `topics.csv` from 04b.
+- The notebook prints only metrics and keywords, no review texts.
+
+### Known limitations
+- Coherence c_v is a proxy. It also rewards near-synonyms and generic words, so the metrics do not replace reading
+  the topics. The labels in 04c come from reading the reviews.
+- Only two parameters were compared; the UMAP settings and the embedding model were not.
+
+---
+
+## 8. Notebook 04b - Topic model training
+
+**In plain words.** This notebook reads the Italian reviews and lets an algorithm group together the reviews that
+talk about similar things, without being told the themes in advance. It saves the model and the group of each
+review. In the recorded environment, training again gives exactly the same groups.
+
+### Input and output
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`.
 - Output:
   - `trenord_reviews_topics.csv`: the clean columns plus `topic`.
-  - `bertopic_model/`, only when retraining: saved with `serialization="safetensors"`, `save_ctfidf=True`,
+  - `bertopic_model/`, saved with `serialization="safetensors"`, `save_ctfidf=True`,
     `save_embedding_model="paraphrase-multilingual-mpnet-base-v2"` ([safetensors](glossary.md#safetensors)).
 
-### Modes: the `RETRAIN` flag
-The first code cell sets `RETRAIN = False`.
-- **Frozen mode (`RETRAIN = False`, default).** Cells 2–4 and 9 run; the training cells 5–8 print "Skipped".
-  - Cell 4 loads the [frozen model](glossary.md#frozen-model) with `BERTopic.load(..., embedding_model=...)`.
-  - It takes the topic stored for each training document (`topic_model.topics_`, in training order).
-  - It checks that there are as many assignments as Italian rows, and attaches them to `italian_df`. The Italian
-    rows have the same filter and order as in training.
-  - Cell 9 writes `topics.csv` and leaves `bertopic_model/` untouched.
-  - `review_id` is not a model input, so a new [secret key](glossary.md#secret-key) does not change any topic.
-- **Retraining (`RETRAIN = True`).** Cells 5–8 run the training below, and cell 9 overwrites the frozen model.
-  Cells 4 and 9 print a warning that the label map in 04b must be rebuilt. Retraining is environment-sensitive
-  (see Validation), so it is only for a new labeling.
-
-### Method (parameters verbatim; cells 5–8 run only when retraining)
+### Method (parameters verbatim)
 1. Load the data and keep the Italian reviews (cell 2).
 2. Prepare the `text_clean` texts. Empty or missing texts are replaced by `" "`; there were none in this run (cell 3).
-3. Configure the model (cell 5):
+3. Configure the model (cell 4):
    - embeddings from the [sentence transformer](glossary.md#sentence-transformer)
      `SentenceTransformer("paraphrase-multilingual-mpnet-base-v2")`;
    - [UMAP](glossary.md#umap): `UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42)`;
    - [HDBSCAN](glossary.md#hdbscan): `HDBSCAN(min_cluster_size=30, metric="euclidean", prediction_data=True)`;
-   - [CountVectorizer](glossary.md#countvectorizer):
-     `CountVectorizer(stop_words=list(italian_stopwords), min_df=5, ngram_range=(1, 2))`, with spaCy's Italian stopwords;
+   - CountVectorizer: `CountVectorizer(stop_words=list(italian_stopwords), min_df=5, ngram_range=(1, 2))`, with
+     spaCy's Italian stopwords;
    - [MMR](glossary.md#mmr-maximal-marginal-relevance): `MaximalMarginalRelevance(diversity=0.3)`;
    - BERTopic: `top_n_words=10, language="multilingual", calculate_probabilities=False`.
-4. Train with `fit_transform(texts)`: 30 topics and 1,609 outliers, which get topic −1 (cell 6).
+4. Train with `fit_transform(texts)`: 30 topics and 1,601 outliers, which get topic −1 (cell 5).
 5. [Reduce outliers](glossary.md#outlier-reduction) with
-   `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 7).
-6. Update the [topic representations](glossary.md#topic-representation), with [c-TF-IDF](glossary.md#c-tf-idf) keywords:
-   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)` (cell 8).
-7. Save the topic assignments, and the model when retraining (cell 9).
-
-The figures in steps 4–5 come from the original training run.
+   `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 6).
+6. Update the [topic representations](glossary.md#topic-representation), with c-TF-IDF keywords:
+   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)` (cell 7).
+7. Save the model and the topic assignments (cell 8).
 
 ### Parameters
 
@@ -394,9 +476,9 @@ The figures in steps 4–5 come from the original training run.
 | UMAP `min_dist` | 0.0 | BERTopic's default; packs similar points tightly, which helps clustering. Not tuned. |
 | UMAP `metric` | cosine | BERTopic's default; the usual choice for text embeddings. |
 | UMAP `random_state` | 42 | Fixed [random seed](glossary.md#random-seed): "without it results change every run" (notebook comment). |
-| HDBSCAN `min_cluster_size` | 30 | Set by hand: "a topic needs at least 30 reviews to be valid" (notebook comment). BERTopic's default is 10. No systematic tuning was done. |
-| CountVectorizer `min_df` | 5 | Set by hand: a keyword must appear in at least 5 reviews (the library default is 1). Not tuned. |
-| CountVectorizer `ngram_range` | (1, 2) | Single words plus [bigrams](glossary.md#bigram); a common choice for BERTopic keywords. Not tuned. |
+| HDBSCAN `min_cluster_size` | 30 | Smallest group accepted as a topic. Chosen in 04a against 20, 25, 40 and 50 (§7). BERTopic's default is 10. |
+| CountVectorizer `min_df` | 5 | A keyword must appear in at least 5 topics, because BERTopic fits the vectorizer on one joined text per topic. Changes only the keywords. Chosen in 04a against 1 and 2 (§7); the library default is 1. |
+| CountVectorizer `ngram_range` | (1, 2) | Single words plus bigrams; a common choice for BERTopic keywords. Not tuned. |
 | MMR `diversity` | 0.3 | "The value recommended in the official BERTopic documentation" (notebook comment). The library default is 0.1. |
 | `top_n_words` | 10 | BERTopic's default. |
 | `reduce_outliers` strategy / threshold | embeddings / 0.0 | Outliers were inspected and judged valid reviews, so all are reassigned by [cosine similarity](glossary.md#cosine-similarity). 0 is the library default threshold; the strategy was chosen over the default `distributions`. |
@@ -404,54 +486,42 @@ The figures in steps 4–5 come from the original training run.
 ### Design decisions
 - **`text_clean`, not `text_lemmatized`.** Transformer embeddings are trained on natural text. Lemmatized,
   stopword-free text was rejected because it loses the context they rely on.
-- **Reassign every outlier.** Noise is handled afterwards by the exclusion rule in 04b, not by leaving reviews
+- **Reassign every outlier.** Noise is handled afterwards by the exclusion rule in 04c, not by leaving reviews
   without a topic.
 - **MMR** reduces redundant keywords, such as the singular and plural of the same word.
-- **Training separated from labeling.** An earlier single notebook (19 final topics) was replaced by 04a
-  (training) and 04b (labeling). The model is trained once and becomes a [frozen model](glossary.md#frozen-model).
-- **Frozen mode by default.** Retraining gave a different clustering after the environment changed (below), so the
-  notebook rebuilds `topics.csv` from the stored assignments instead of retraining. This keeps the 04b label map
-  valid whatever the environment.
-
-### Validation
-- 30 topics, with sizes from 43 to 1,119 reviews; 0 outliers after reduction.
-- **Retraining in the same environment (2026-11-01).** After the anonymization change, the notebook was retrained in
-  the environment where the model had been trained. It was compared with a backup of the frozen model, matching
-  rows on `review_id`:
-  - 0 of 6,951 rows changed topic;
-  - the number and sizes of the topics were identical;
-  - the top-10 keywords and their weights were identical for all 30 topics.
-
-  The only difference between files was the order of the 624 stopwords stored in the vectorizer configuration,
-  because spaCy stores them as a set.
-- **Retraining after the venv was rebuilt (2026-11-02).** After the project folder was renamed, the virtual
-  environment was rebuilt from the same `requirements-notebooks.txt`. The notebook was retrained with the same code
-  and data, and compared with the frozen model row by row (ids had changed with the key rotation):
+- **Training separated from labeling.** An earlier single notebook (19 final topics) was replaced by separate
+  training and labeling notebooks, so the labels can be checked against the exact model they were written for.
+- **No frozen mode.** Earlier versions kept a [frozen model](glossary.md#frozen-model) and rebuilt `topics.csv`
+  from it instead of retraining. After the venv was rebuilt on 2026-11-02, retraining with the same code and data
+  gave a different clustering:
   - 6,428 of 6,951 rows had a different topic id;
   - 92.1% of rows agreed under the best matching between old and new topics;
-  - the adjusted Rand index was 0.81;
-  - there were still 30 topics, but with different sizes (the largest 1,214 and 1,143, against 1,119 and 686) and
-    different keywords.
+  - the adjusted Rand index was 0.81.
 
-  The packages installed in the original environment were not recorded, so the exact cause cannot be identified.
-  The most likely cause is the indirect dependencies, which `requirements-notebooks.txt` does not pin, such as
-  transformers, numba and pynndescent. The new run was discarded and the frozen model restored.
-- **Frozen mode (2026-11-02).** `topics.csv` rebuilt from the frozen model: `topic` identical to the restored file
-  for every row, and every other column identical except `review_id`. The model files were unchanged (SHA-256).
+  The environment of the frozen model had not been recorded, so it could not be rebuilt. The frozen mode was
+  removed, the model was retrained, the environment was recorded in a [lock file](glossary.md#lock-file) and the
+  labels in 04c were rebuilt for the new topic ids. The old frozen model is kept only as a local backup outside the
+  repository.
+
+### Validation
+- 30 topics, with sizes from 52 to 1,214 reviews; 1,601 outliers before reduction, 0 after.
+- **Retraining is reproducible in the locked environment.** Consecutive trainings on 2026-11-02 gave the same topic
+  for every review, the same sizes and the same keyword weights. The run with `min_cluster_size=30` in 04a, with
+  precomputed embeddings, also gives the same topic for every review.
 
 ### Known limitations
 - Each review gets one topic, although many mention several issues.
-- Retraining is reproducible only in the same environment. The [lock file](glossary.md#lock-file) records today's
-  environment, not the one in which the frozen model was trained.
-- Some topics are dominated by short, generic reviews (see the exclusion rule in 04b).
+- Retraining is reproducible only in the locked environment. A different environment can number and size the
+  topics differently, which the guard in 04c catches.
+- Some topics are dominated by short, generic reviews (see the exclusion rule in 04c).
 
 ---
 
-## 8. Notebook 04b — Topic labeling and export
+## 9. Notebook 04c - Topic labeling and export
 
-**In plain words.** This notebook gives each group of reviews a short human name and a category (problem, praise
-or other), and sets aside groups made of very short reviews that say nothing specific. It then saves the files used
-by the dashboard and checks that no personal data has slipped through.
+**In plain words.** This notebook gives each group of reviews a short human name and one of four categories, and
+sets aside groups made of very short reviews that say nothing specific. It then saves the files used by the
+dashboard and checks that no personal data has slipped through.
 
 ### Input and output
 - Input: `trenord_reviews_topics.csv` and `bertopic_model/`. `trenord_reviews_clean.csv` is used only to check
@@ -463,66 +533,70 @@ by the dashboard and checks that no personal data has slipped through.
     with at least one upvote, for each of the 13 topics.
   - `bertopic_model_final/`: the model after the merges.
 
+### Categories
+The categories are the project's own, chosen after reading the topics:
+- **App Issue**: something in the app does not work, works badly or stopped working;
+- **Praise**: what users like about the app;
+- **Rail Service**: complaints about the trains and the company, not about the app;
+- **App Updates**: reviews that compare the app with its earlier versions.
+
+No topic is made mostly of requests for new features: requests exist in the reviews, but they are spread across
+topics.
+
 ### Method
-1. Load the data and the frozen model, and run the **guard** (cell 3):
-   - topic ids in `topics.csv` and in the model must be exactly 0–29;
+1. Load the data and the model, and run the **guard** (cell 3):
+   - topic ids in `topics.csv` and in the model must be exactly 0-29;
    - sizes in both must match a hardcoded `expected_sizes`;
    - model assignments must match `topics.csv` row by row.
 
    Any failure raises an error explaining that the model changed and the label map must be rebuilt.
 2. Document the labeling decisions in the notebook (cell 4).
-3. Build the label map `LABEL_GROUPS` of `(ids, label, category)`, keyed on frozen ids; an assertion checks that
-   every id 0–29 appears exactly once (cell 5).
-4. Merge topics with `TOPICS_TO_MERGE = [[2, 4, 8, 28], [5, 16], [7, 23], [6, 9], [13, 19]]`.
+3. Build the label map `LABEL_GROUPS` of `(ids, label, category)`, keyed on the 04b topic ids; an assertion checks
+   that every id 0-29 appears exactly once (cell 5).
+4. Merge topics with `TOPICS_TO_MERGE = [[0, 6, 29], [4, 15], [8, 11, 20, 24], [5, 22], [12, 17]]`.
    The list must equal the multi-topic groups of the label map. MMR (`diversity=0.3`) is restored, and
    `merge_topics(texts, TOPICS_TO_MERGE)` updates the keywords and embeddings of the saved model only. Every
    post-merge topic must hold a single label, and every kept label a single post-merge topic (cell 6).
 5. Print the final distribution (cell 7) and run the bias check (cell 8).
-6. Save the outputs (cell 9) and check them (cell 10).
+6. Save the outputs (cell 9) and check them (cell 10). The results are summarised in cell 11.
 
 ### Final topics
 
-| Label | Category | Frozen ids | Reviews | Share | Avg ★ |
+| Label | Category | Topic ids | Reviews | Share | Avg ★ |
 |---|---|---|---:|---:|---:|
-| Real-time Train Info | Problem | 2, 4, 8, 28 | 1,530 | 25.3% | 1.78 |
-| Ticket Purchase Failures | Problem | 0 | 1,119 | 18.5% | 1.41 |
-| Subscription Issues | Problem | 1 | 654 | 10.8% | 1.44 |
-| App Stability & Crashes | Problem | 5, 16 | 635 | 10.5% | 1.58 |
-| Poor Usability | Problem | 3 | 531 | 8.8% | 1.45 |
-| Ease of Use | Praise | 6, 9 | 500 | 8.3% | 4.53 |
-| Login & Account | Problem | 7, 23 | 291 | 4.8% | 1.39 |
-| Purchase & Payment Praise | Praise | 13, 19 | 269 | 4.4% | 4.01 |
-| Station & Favorites Bugs | Problem | 11 | 164 | 2.7% | 1.74 |
-| QR Code at Turnstiles | Problem | 14 | 117 | 1.9% | 1.60 |
-| Trenord Service Complaints | Other | 22 | 86 | 1.4% | 1.14 |
-| Version Evolution | Other | 20 | 84 | 1.4% | 3.65 |
-| Station Coverage Gaps | Problem | 27 | 66 | 1.1% | 1.80 |
+| Unreliable Train Status | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 |
+| Ticket Purchase Failures | App Issue | 1 | 1,143 | 19.1% | 1.41 |
+| App Crashes & Freezes | App Issue | 4, 15 | 655 | 10.9% | 1.61 |
+| Subscription Renewal Failures | App Issue | 2 | 641 | 10.7% | 1.44 |
+| Poor Usability | App Issue | 3 | 499 | 8.3% | 1.43 |
+| Ease of Use | Praise | 8, 11, 20, 24 | 463 | 7.7% | 4.54 |
+| Login & Account Issues | App Issue | 5, 22 | 289 | 4.8% | 1.40 |
+| Easy Purchase & Payment | Praise | 12, 17 | 277 | 4.6% | 3.98 |
+| Station & Favorites Bugs | App Issue | 7 | 173 | 2.9% | 1.68 |
+| QR Code Failures | App Issue | 13 | 118 | 2.0% | 1.59 |
+| Rail Service Complaints | Rail Service | 19 | 87 | 1.5% | 1.17 |
+| Version Comparisons | App Updates | 18 | 81 | 1.4% | 3.63 |
+| Missing Stations | App Issue | 28 | 71 | 1.2% | 1.85 |
 
-Excluded frozen ids: 10, 12, 15, 17, 18, 21, 24, 25, 26, 29. Category and exclusion totals are in Key numbers.
+Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion totals are in Key numbers.
 
 ### Design decisions
-- **Label map keyed on frozen ids.** `merge_topics()` renumbers all topics by size.
-  - The previous 04b keyed its labels on post-merge ids of an earlier model. After the 2026-09-01 rescrape and
+- **Label map keyed on the 04b topic ids.** `merge_topics()` renumbers all topics by size.
+  - An earlier version keyed its labels on post-merge ids of an earlier model. After the 2026-09-01 rescrape and
     retraining, those labels pointed to the wrong topics without any error.
-  - Frozen ids plus the guard turn that silent failure into an explicit error.
-- **Categories.** Following the Maalej taxonomy:
-  - Problem: something does not work, or no longer works;
-  - Feature Request: functionality users ask to be added;
-  - Praise: what users appreciate;
-  - Other: not about the app itself, or comparisons between versions.
+  - Ids from 04b plus the guard turn that silent failure into an explicit error.
 - **Exclusion rule.** A topic is excluded when it consists mostly of very short reviews (about five words or fewer)
   with generic sentiment and no indication of what works or fails.
 - **Topic 3 kept as Poor Usability.** It is borderline: its reviews are short, and many are generic. Exclusion was
-  considered. It is kept because it is the only topic about clarity, intuitiveness, complexity and slowness;
-  excluding it would remove that dimension and make the excluded set even more positive.
-- **Station Coverage Gaps is a Problem.** The reviews report stations removed from the app or missing from its list,
-  often after an update. This is a regression, so Feature Request was rejected.
-- **Delay Notifications merged into Real-time Train Info.** Topics 8 and 28 (late or wrong delay information) were
-  once a separate topic, but they describe the same problem as topics 2 and 4.
-- **Digital Payments reclassified as Praise.** Topic 19, formerly a Feature Request, is mostly positive reviews of
-  the Satispay and PayPal options. It is merged with topic 13 into Purchase & Payment Praise.
-- **Topics 6 and 9 merged into Ease of Use.**
-- **No Feature Request topic.** Requests are scattered across topics and dominate none of them.
+  considered. It is kept because it is the only topic about clarity, complexity and slowness; excluding it would
+  remove that dimension and make the excluded set even more positive.
+- **Missing Stations is an App Issue.** The reviews report stations removed from the app or missing from its list,
+  often after an update: something that worked and stopped working. A few fare and route complaints are mixed in.
+- **Topics 0, 6 and 29 merged into Unreliable Train Status.** All three are about delays and cancellations shown
+  late, wrong or not at all.
+- **Topic 23 excluded.** Its reviews say "ottima app" and nothing else, while the Ease of Use topics name a specific
+  quality.
+- **No category for feature requests.** Requests are scattered across topics and dominate none of them.
 - **Text inspection kept out of the notebook.** The manual review notes contain review texts and stay local
   (`labeling/`, gitignored). The notebook prints only counts and aggregates.
 
@@ -530,28 +604,27 @@ Excluded frozen ids: 10, 12, 15, 17, 18, 21, 24, 25, 26, 29. Category and exclus
 
 | Check | Result |
 |---|---|
-| Guard (ids 0–29 in both, sizes match, assignments match row by row) | 5 × PASS |
-| Every id 0–29 exactly once in the label map | PASS (30 ids, 13 labels + EXCLUDE) |
+| Guard (ids 0-29 in both, sizes match, assignments match row by row) | 5 × PASS |
+| Every id 0-29 exactly once in the label map | PASS (30 ids, 13 labels + EXCLUDE) |
 | Merge list equals the multi-topic groups of the label map | PASS |
-| Post-merge topics | 23; each maps to one label, and each kept label to one post-merge topic |
+| Post-merge topics | 22; each maps to one label, and each kept label to one post-merge topic |
 | No `author` column in any output | PASS |
 | `review_id` hashed (12 hex) for every row | PASS (6,951 / 6,951) |
 | `reply_text` identical to clean.csv (and thus to raw) | PASS (0 different) |
-| 13 labels in analysis.csv, no EXCLUDE rows | PASS |
-| Frozen model files unchanged by 04b | verified by SHA-256 |
+| 13 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
 
 **Bias check.** The values are in Key numbers. The notebook computes its conclusion from them: excluded reviews are
 more positive, so the analysis set is more negative than all Italian reviews. This is an
 [exclusion bias](glossary.md#exclusion-bias).
 
 ### Known limitations
-- The labels and the exclusion rule are manual judgements.
+- The labels, the categories and the exclusion rule are manual judgements.
 - The analysis set is more negative than the full dataset.
 - Poor Usability includes many short, generic complaints.
 
 ---
 
-## 9. Dashboard
+## 10. Dashboard
 
 **In plain words.** The dashboard is a web page that shows the results interactively. Readers can filter by year,
 star rating and category, look at one theme in detail, and see which words appear most in negative reviews.
@@ -569,7 +642,7 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
 
 ### Filters
 - Sidebar filters: a year range slider, one checkbox per star rating and one per category.
-- Categories are read from the data, so there is no Feature Request filter.
+- Categories are read from the data, so the filter shows exactly App Issue, App Updates, Praise and Rail Service.
 - Unchecking every rating or every category falls back to all of them.
 - When the filters return no rows, each tab shows an information message.
 
@@ -597,7 +670,7 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
 ### Tabs
 1. **Overview.**
    - Key Findings, computed at every run and not affected by the filters:
-     - top problem: the Problem topic with the most reviews, with its average rating;
+     - top app issue: the App Issue topic with the most reviews, with its average rating;
      - average rating in the first vs the last qualifying year (Italian reviews);
      - peak reply rate vs the rate in the last qualifying year (Italian reviews);
      - largest Praise topic, with size and average rating.
@@ -605,9 +678,9 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
      Italian reviews, as its help text says.
    - Rating breakdown, rating distribution and average rating over time.
 2. **Topics.**
-   - Key findings that follow the filters: most critical Problem topic, share of Problem reviews, most discussed
+   - Key findings that follow the filters: most critical App Issue topic, share of App Issue reviews, most discussed
      topic, best-rated topic.
-   - A priority table with average rating, review count, yearly rating trend and reply rate.
+   - A priority table with category, average rating, review count, yearly rating trend and reply rate.
    - The reply rate over time for all Italian reviews.
 3. **Deep Dive.** For one topic:
    - its category badge;
@@ -615,15 +688,17 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
    - rating distribution and rating trend;
    - its most upvoted reviews.
 4. **Words.**
-   - Most frequent lemmas in 1–2★ reviews, as a bar chart and a word cloud.
+   - Most frequent lemmas in 1-2★ reviews, as a bar chart and a word cloud.
    - Critical words ranked by a [normalized frequency ratio](glossary.md#normalized-frequency-ratio),
      `score = (freq_neg / n_neg) / (freq_pos / n_pos + 0.001)`, with a yearly trend for the top 5.
 
+Each category has its own emoji and badge colour: App Issue red, Praise green, Rail Service orange, App Updates blue.
+
 ### Key Findings at this snapshot
-- **Top problem:** Real-time Train Info (1,530 reviews, 1.78★).
+- **Top app issue:** Unreliable Train Status (1,501 reviews, 1.78★).
 - **Average rating:** fell from 3.54★ (2015) to 1.52★ (2025).
 - **Reply rate:** peaked at 100% (2016); 2% in 2025.
-- **Largest Praise topic:** Ease of Use (500 reviews, 4.53★).
+- **Largest Praise topic:** Ease of Use (463 reviews, 4.54★).
 
 ### Design decisions
 - **Normalized frequency ratio instead of differential TF-IDF.** The score reads directly as "x times more frequent
@@ -631,7 +706,7 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
   small smoothing constant. Differential TF-IDF was rejected as less interpretable.
 - **Everything shown is computed from the data.** This covers the Key Findings, the incomplete-year cutoff and the
   category filters. A "most discussed topic" card was replaced by the largest Praise topic, because it duplicated
-  "top problem".
+  "top app issue".
 - **No spaCy at runtime.** A static stopword list replaces the spaCy import, so the deployed app has fewer
   dependencies.
 - **Shared code.** Helpers draw the rating distribution, rating trend and reply-rate charts; shared constants define
@@ -642,29 +717,28 @@ A [smoke test](glossary.md#smoke-test) with `streamlit.testing.v1.AppTest` ran 1
 all 4 tabs rendered:
 - default filters;
 - each of the 13 Deep Dive topics;
-- zero rows (2015, 1★, Other);
+- zero rows (2015, 1★, App Updates);
 - only the incomplete year 2026;
-- Praise only (no Problem topics);
+- Praise only (no App Issue topics);
 - 5★ only (no negative reviews).
 
-The test passed on Python 3.13 and 3.14. The scenarios are in `tests/test_dashboard.py`, one pytest test each.
+The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 
 ---
 
-## 10. Reproducibility
+## 11. Reproducibility
 
-**Run order.** 01 → 01b → 02 → 03 → 04a → 04b → dashboard. In normal use 01 is **not** rerun, because it would make a
-new snapshot. 04a runs in frozen mode (`RETRAIN = False`, §7), so it rebuilds `topics.csv` from the frozen model
-without training a new one.
+**Run order.** 01 → 01b → 02 → 03 → 04a → 04b → 04c → dashboard. In normal use 01 is **not** rerun, because it
+would make a new snapshot. 04a only compares settings and saves nothing, so it can be skipped.
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
 - Pinned direct dependencies: `requirements-notebooks.txt` for the notebooks, `requirements.txt` for the dashboard.
 - Full environment: `requirements-notebooks.lock.txt`, a [lock file](glossary.md#lock-file) from `pip freeze`. It
-  pins all 138 installed packages, including indirect ones such as transformers, numba and pynndescent.
-  - It captures the environment of 2026-11-02, in which the pipeline was rerun in frozen mode and the tests pass.
-  - It is **not** the environment in which the frozen model was trained, which was not recorded. Installing it does
-    not make retraining reproduce the frozen model.
+  pins all 140 installed packages, including indirect ones such as transformers, numba and pynndescent.
+  - It captures the environment of 2026-11-02 (setuptools, already installed, was added to the file on
+    2026-11-03). In it 04b reproduces the current topic model exactly and the tests pass.
+  - It is not the environment of the earlier frozen model (§8), which was not recorded.
 - [Secret key](glossary.md#secret-key) in `.env` (template: `.env.example`).
 
 **How to run.**
@@ -672,11 +746,11 @@ without training a new one.
 ```bash
 python -m venv venv_trenord
 venv_trenord\Scripts\activate                   # Windows; on macOS / Linux: source venv_trenord/bin/activate
-pip install -r requirements-notebooks.txt       # notebooks (or requirements-notebooks.lock.txt for the full environment)
+pip install -r requirements-notebooks.lock.txt  # notebooks, full pinned environment (or requirements-notebooks.txt)
 pip install -r requirements.txt                 # dashboard
 cp .env.example .env                            # then replace change_me with the output of:
 python -c "import secrets; print(secrets.token_hex(32))"
-# Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04a (frozen mode) → 04b
+# Notebooks, from the notebooks/ folder: 01 → 01b → 02 → 03 → 04a → 04b → 04c
 streamlit run dashboard/app.py                  # from the repository root
 pytest tests/                                   # dashboard smoke tests, from the repository root
 ```
@@ -685,44 +759,40 @@ The tests need only `requirements.txt` and `pytest` (pinned in `requirements-not
 them on every push and pull request to `main` (`.github/workflows/tests.yml`).
 
 **Your own key.** Everyone who reruns 01b needs their own key, generated as above. A different key gives different
-`review_id` values and nothing else: no step uses the id as an input. On 2026-11-02 the key was rotated and
-01b → 04b rerun (04a in frozen mode). Every `review_id` changed. All other columns of every output were identical,
-as were the topic of every review, the 13 labels with their sizes, the six charts (byte-identical) and
-`bertopic_model_final`.
+`review_id` values and nothing else: no step uses the id as an input. On 2026-11-02 the key was rotated and the
+pipeline rerun. Every `review_id` changed. All other columns of every output were identical, as were the topic of
+every review, the 13 labels with their sizes and the six charts (byte-identical).
+
+**Rerun of 2026-11-03.** 01b, 02, 03 and 04c were rerun with the same key after the new labeling. The anon, clean
+and topics files were identical to the previous run, so every `review_id` is unchanged. The charts changed only in
+their titles.
 
 **Deterministic steps.**
 - 01b, given the same raw file and key.
 - 02, for fixed library versions.
 - 03.
-- 04a in frozen mode, which only reads the frozen model.
-- 04b, which loads the frozen model; its outputs were identical across consecutive runs.
+- 04a and 04b, in the locked environment.
+- 04c, which loads the 04b model.
 
 **Non-deterministic steps.**
 - 01 depends on the live store.
-- 04a with `RETRAIN = True`. An earlier version of this document called retraining reproducible, but that held
-  only within the same environment. In the environment where the model was trained, retraining matched the frozen
-  model exactly (2026-11-01). After the venv was rebuilt, retraining with the same code and data gave a different
-  clustering (2026-11-02):
-  - 6,428 of 6,951 rows had a different topic id;
-  - 92.1% of rows agreed under the best matching between old and new topics;
-  - the adjusted Rand index was 0.81 (§7).
+- 04b in a different environment: after the venv was rebuilt, retraining gave a different clustering (§8).
 
-**Why 04a must not be retrained without rebuilding the label map.** The label map refers to the topic ids and sizes
-of the frozen model. A retrained model can number and size its topics differently, so labels would attach to the
-wrong reviews. The guard in 04b stops with an error in that case.
+**Why the label map must be rebuilt after retraining in another environment.** The label map refers to the topic
+ids and sizes of the 04b model. A model trained elsewhere can number and size its topics differently, so labels
+would attach to the wrong reviews. The guard in 04c stops with an error in that case.
 
-**What a fresh clone can reproduce.** The frozen BERTopic model, the raw data and the intermediate CSVs are not
-published, so on a fresh clone 04a (frozen mode) and 04b cannot run as is. Retraining 04a would produce different
-topic ids, which the guard in 04b catches. Someone cloning the repository can:
+**What a fresh clone can reproduce.** The BERTopic model, the raw data and the intermediate CSVs are not published,
+so on a fresh clone 04b and 04c cannot run as is. Someone cloning the repository can:
 - run the dashboard on the published CSVs;
 - inspect every notebook with its saved outputs;
-- rerun the whole pipeline on a new scrape with their own key.
+- rerun the whole pipeline on a new scrape with their own key, in the locked environment.
 
-They cannot regenerate the published topics and labels exactly without the original raw data and the frozen model.
+They cannot regenerate the published topics and labels exactly without the original raw data.
 
 ---
 
-## 11. Privacy and data handling
+## 12. Privacy and data handling
 
 | Item | Status |
 |---|---|
@@ -744,12 +814,13 @@ They cannot regenerate the published topics and labels exactly without the origi
 `.env`. It is not in the repository, in any notebook output or in any document. The pipeline was rerun, so every
 published `review_id` comes from the new key. Ids published before the rotation cannot be linked to the new ones.
 
-**Notebook outputs.** The notebooks print only counts, aggregates and, in 01b, a preview of non-text columns. A scan
-of all saved outputs after the 2026-11-02 rerun found no key, review or reply text, author name or local path.
+**Notebook outputs.** The notebooks print only counts, aggregates, keywords and, in 01b, a preview of non-text
+columns. A scan of all saved outputs after the 2026-11-03 rerun found no key, review or reply text, author name or
+local path.
 
 ---
 
-## 12. Future work
+## 13. Future work
 
 - **Aspect-based sentiment analysis**, to capture several issues and opinions within one review instead of one
   topic per review.
@@ -757,9 +828,9 @@ of all saved outputs after the 2026-11-02 rerun found no key, review or reply te
 
 ---
 
-## 13. Data dictionary
+## 14. Data dictionary
 
-The three published CSVs in `data/processed/`, written by 04b with `encoding="utf-8-sig"` and `index=False`.
+The three published CSVs in `data/processed/`, written by 04c with `encoding="utf-8-sig"` and `index=False`.
 Types are as read by `pandas.read_csv`. "Empty" means an empty cell, read as `NaN`. Columns that hold review or
 reply text, or text derived from it, have no example values.
 
@@ -770,55 +841,55 @@ All Italian reviews: 6,951 rows, 21 columns, one row per review.
 | Column | Type | Description | Example values |
 |---|---|---|---|
 | `review_id` | string | Pseudonymised review id: HMAC-SHA256 of the store id with `PSEUDO_KEY`, first 12 hex characters (§4). Unique. Changes if the key changes. | `e0441c09f9ba`, `525ab22d4722` |
-| `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
-| `text` | string | Review text as published on the store, with ticket-like codes masked (§4). | — |
-| `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |
+| `rating` | int | Star rating, 1-5. | `1`, `4`, `5` |
+| `text` | string | Review text as published on the store, with ticket-like codes masked (§4). | - |
+| `thumbs_up` | int | Number of users who marked the review as helpful, 0-87. | `0`, `1`, `51` |
 | `app_version` | string | App version the review was written with. Empty when the store does not report it (496 rows). | `4.12.0`, `4.16.7`, `5.0.7` |
 | `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`, from 2015-05-05 to 2026-08-04. | `2026-08-03 17:29:22` |
 | `has_reply` | bool | Whether the developer replied. | `True`, `False` |
-| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (4,095 rows). | — |
+| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (4,095 rows). | - |
 | `reply_date` | string | Reply date and time, `YYYY-MM-DD HH:MM:SS`. Empty when `has_reply` is `False`. | `2015-06-20 13:15:12`, `2026-07-20 11:04:11` |
-| `year` | int | Year of `date`, 2015–2026. | `2015`, `2025`, `2026` |
-| `month` | int | Month of `date`, 1–12. | `1`, `8`, `12` |
+| `year` | int | Year of `date`, 2015-2026. | `2015`, `2025`, `2026` |
+| `month` | int | Month of `date`, 1-12. | `1`, `8`, `12` |
 | `day_of_week` | string | Weekday of `date`, in English. | `Monday`, `Sunday` |
 | `year_month` | string | `YYYY-MM` of `date`. | `2015-05`, `2026-08` |
 | `language` | string | Language detected by lingua (§5). Always `it` in this file. | `it` |
-| `text_clean` | string | Lowercased text without URLs, symbols and extra spaces (§5). Input to BERTopic (§7). | — |
-| `word_count` | int | Number of words in the original `text`, 1–278. | `17`, `45`, `63` |
-| `text_lemmatized` | string | Lemmas without stopwords (§5), used by the dashboard's Words tab. Empty when no token survives (49 rows). | — |
-| `topic` | int | Topic id of the frozen BERTopic model, 0–29 (§7). | `0`, `2`, `22` |
-| `topic_label` | string | One of the 13 topic labels, or `EXCLUDE` for topics without specific content (§8). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
-| `category` | string | Maalej category of the label: `Problem`, `Praise` or `Other`. Empty for `EXCLUDE` rows (905 rows). | `Problem`, `Praise`, `Other` |
-| `topic_merged` | int | Topic id after the merges in 04b, 0–22, renumbered by size. Not stable across retrainings; use `topic_label`. | `0`, `1`, `14` |
+| `text_clean` | string | Lowercased text without URLs, symbols and extra spaces (§5). Input to BERTopic (§8). | - |
+| `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
+| `text_lemmatized` | string | Lemmas without stopwords (§5), used by the dashboard's Words tab. Empty when no token survives (49 rows). | - |
+| `topic` | int | Topic id of the 04b BERTopic model, 0-29 (§8). | `0`, `2`, `22` |
+| `topic_label` | string | One of the 13 topic labels, or `EXCLUDE` for topics without specific content (§9). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
+| `category` | string | Category of the label: `App Issue`, `Praise`, `Rail Service` or `App Updates` (§9). Empty for `EXCLUDE` rows (953 rows). | `App Issue`, `Praise`, `Rail Service` |
+| `topic_merged` | int | Topic id after the merges in 04c, 0-21, renumbered by size. Not stable across retrainings; use `topic_label`. | `0`, `1`, `12` |
 
 ### `trenord_reviews_analysis.csv`
 
-The informative reviews: `trenord_reviews_labeled.csv` without the `EXCLUDE` rows. 6,046 rows, the same 21 columns.
+The informative reviews: `trenord_reviews_labeled.csv` without the `EXCLUDE` rows. 5,998 rows, the same 21 columns.
 This is the main file of the dashboard.
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
 | `review_id` | string | Pseudonymised review id, 12 hex characters. Unique. | `e0441c09f9ba`, `525ab22d4722` |
-| `rating` | int | Star rating, 1–5. | `1`, `4`, `5` |
-| `text` | string | Review text, with ticket-like codes masked. | — |
-| `thumbs_up` | int | Number of users who marked the review as helpful, 0–87. | `0`, `1`, `51` |
-| `app_version` | string | App version. Empty when not reported (408 rows). | `4.16.7`, `5.0.6`, `5.0.7` |
+| `rating` | int | Star rating, 1-5. | `1`, `4`, `5` |
+| `text` | string | Review text, with ticket-like codes masked. | - |
+| `thumbs_up` | int | Number of users who marked the review as helpful, 0-87. | `0`, `1`, `51` |
+| `app_version` | string | App version. Empty when not reported (406 rows). | `4.16.7`, `5.0.6`, `5.0.7` |
 | `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`, from 2015-05-05 to 2026-08-04. | `2026-08-03 17:29:22` |
-| `has_reply` | bool | Whether the developer replied (2,414 rows `True`). | `True`, `False` |
-| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (3,632 rows). | — |
+| `has_reply` | bool | Whether the developer replied (2,396 rows `True`). | `True`, `False` |
+| `reply_text` | string | Developer reply. Empty when `has_reply` is `False` (3,602 rows). | - |
 | `reply_date` | string | Reply date and time. Empty when `has_reply` is `False`. | `2015-06-20 13:15:12`, `2026-07-20 11:04:11` |
-| `year` | int | Year of `date`, 2015–2026. | `2015`, `2025`, `2026` |
-| `month` | int | Month of `date`, 1–12. | `1`, `8`, `12` |
+| `year` | int | Year of `date`, 2015-2026. | `2015`, `2025`, `2026` |
+| `month` | int | Month of `date`, 1-12. | `1`, `8`, `12` |
 | `day_of_week` | string | Weekday of `date`, in English. | `Monday`, `Sunday` |
 | `year_month` | string | `YYYY-MM` of `date`. | `2015-05`, `2026-08` |
 | `language` | string | Detected language. Always `it`. | `it` |
-| `text_clean` | string | Lowercased, cleaned text. | — |
-| `word_count` | int | Number of words in the original `text`, 1–278. | `17`, `45`, `63` |
-| `text_lemmatized` | string | Lemmas without stopwords. Empty when no token survives (10 rows). | — |
-| `topic` | int | Frozen topic id; the 20 ids kept by the label map (§8). | `0`, `2`, `22` |
-| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Real-time Train Info`, `Subscription Issues` |
-| `category` | string | `Problem`, `Praise` or `Other`. Never empty. | `Problem`, `Praise`, `Other` |
-| `topic_merged` | int | Post-merge topic id; 13 distinct values in 0–18, one per label. | `0`, `1`, `14` |
+| `text_clean` | string | Lowercased, cleaned text. | - |
+| `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
+| `text_lemmatized` | string | Lemmas without stopwords. Empty when no token survives (9 rows). | - |
+| `topic` | int | Topic id of the 04b model; the 21 ids kept by the label map (§9). | `0`, `2`, `22` |
+| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Unreliable Train Status`, `Subscription Renewal Failures` |
+| `category` | string | `App Issue`, `Praise`, `Rail Service` or `App Updates`. Never empty. | `App Issue`, `Praise`, `App Updates` |
+| `topic_merged` | int | Post-merge topic id; 13 distinct values in 0-20, one per label. | `0`, `1`, `12` |
 
 ### `top_reviews_per_topic.csv`
 
@@ -827,9 +898,9 @@ The 5 most upvoted reviews with at least one upvote for each of the 13 topics, s
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
-| `topic_label` | string | Topic label, 5 rows each. | `App Stability & Crashes`, `Login & Account` |
-| `category` | string | Category of the topic: `Problem` (45 rows), `Praise` (10) or `Other` (10). | `Problem`, `Praise` |
-| `rating` | int | Star rating, 1–5. | `1`, `3`, `5` |
-| `thumbs_up` | int | Helpful votes, 1–87; the ranking key within each topic. | `23`, `53`, `64` |
+| `topic_label` | string | Topic label, 5 rows each. | `App Crashes & Freezes`, `Login & Account Issues` |
+| `category` | string | Category of the topic: `App Issue` (45 rows), `Praise` (10), `Rail Service` (5) or `App Updates` (5). | `App Issue`, `Praise` |
+| `rating` | int | Star rating, 1-5. | `1`, `3`, `5` |
+| `thumbs_up` | int | Helpful votes, 1-87; the ranking key within each topic. | `23`, `53`, `64` |
 | `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`. | `2021-09-15 06:12:06`, `2023-07-02 17:12:43` |
-| `text` | string | Review text, with ticket-like codes masked. | — |
+| `text` | string | Review text, with ticket-like codes masked. | - |

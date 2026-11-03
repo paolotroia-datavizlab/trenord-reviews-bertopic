@@ -1,11 +1,11 @@
-# Glossary — Trenord App Reviews: Topic Modeling with BERTopic
+# Glossary - Trenord App Reviews: Topic Modeling with BERTopic
 
 Technical terms used in [architecture.md](architecture.md), in alphabetical order.
 
 ## BERTopic
 A topic modeling library that groups documents by meaning rather than by shared words. It chains an embedding
 model, dimensionality reduction (UMAP), clustering (HDBSCAN) and keyword extraction (c-TF-IDF).
-In this project it groups the Italian reviews into 30 topics (notebook 04a).
+In this project it groups the Italian reviews into 30 topics (notebook 04b).
 
 ## Bigram
 A sequence of two adjacent words treated as one term, such as "acquistare biglietti". Single words are unigrams;
@@ -21,6 +21,16 @@ Class-based TF-IDF: a score for how characteristic a word is of one topic compar
 It treats all the documents of a topic as a single document.
 BERTopic uses it to find each topic's keywords.
 
+## Category
+The group a topic label belongs to. This project uses four categories of its own:
+- App Issue: something in the app does not work, works badly or stopped working;
+- Praise: what users like about the app;
+- Rail Service: complaints about the trains and the company, not about the app;
+- App Updates: reviews that compare the app with its earlier versions.
+
+Notebook 04c assigns them by hand. No topic is made mostly of requests for new features, so there is no category
+for them.
+
 ## Continuation token
 A bookmark returned by a paginated interface that tells the next request where the previous page ended.
 The scraper passes it back on every request to download the reviews page by page.
@@ -31,8 +41,8 @@ direction).
 UMAP compares review embeddings with it, and outlier reduction uses it to find each outlier's closest topic.
 
 ## CountVectorizer
-A scikit-learn tool that turns texts into word counts, with options to drop stopwords and rare words and to
-count n-grams.
+A scikit-learn tool that turns texts into word counts, with options to drop stopwords and rare words
+([min_df](#min_df)) and to count n-grams.
 BERTopic uses it to build the vocabulary from which topic keywords are chosen.
 
 ## Embedding
@@ -43,17 +53,20 @@ Every Italian review is turned into an embedding before clustering.
 ## Exclusion bias
 A distortion that arises when the data removed from an analysis differs systematically from the data kept.
 Here the excluded reviews are more positive than the included ones, so the analysis set is more negative than
-all reviews; notebook 04b measures this.
+all reviews; notebook 04c measures this.
 
 ## Frozen model
 A trained model that is saved and deliberately never retrained, so that results that depend on it stay valid.
-The label map in 04b depends on the topic ids of the frozen BERTopic model from 04a. In its default frozen mode,
-04a reads the topic of each review from this model instead of training a new one.
+Earlier versions of this project labeled a frozen BERTopic model and rebuilt the topics from it instead of
+retraining. That frozen mode was removed on 2026-11-02: the model was retrained in 04b, the new training is
+reproducible in the locked environment, and the labels in 04c were rebuilt for its topic ids. The old frozen model
+is kept only as a local backup outside the repository.
 
 ## HDBSCAN
 A clustering algorithm that finds groups of points in dense regions and leaves isolated points unassigned as
 outliers. It does not need the number of clusters in advance.
-It forms the topics from the reduced review embeddings.
+It forms the topics from the reduced review embeddings. Its `min_cluster_size` is the smallest group it accepts as
+a topic.
 
 ## HMAC
 Hash-based message authentication code: a one-way fingerprint of a value computed with a
@@ -72,13 +85,14 @@ It groups word variants in the frequency analyses of the dashboard.
 ## Lock file
 A list of every installed package with its exact version, including the indirect dependencies that a
 requirements file does not pin, so that the same environment can be rebuilt.
-`requirements-notebooks.lock.txt` is the `pip freeze` of the environment of 2026-11-02, not of the one in which the
-frozen model was trained.
+`requirements-notebooks.lock.txt` is the `pip freeze` of the project environment. In it, retraining 04b reproduces
+the current topic model exactly.
 
-## Maalej taxonomy
-A classification of app reviews into bug reports, feature requests, user experiences and ratings, proposed by
-Maalej et al. (2016).
-Here it is adapted into four categories: Problem, Feature Request, Praise and Other.
+## min_df
+A CountVectorizer option: a term is kept only if it appears in at least this many documents.
+BERTopic fits the vectorizer on one joined text per topic, so in BERTopic `min_df` counts topics, not reviews. It
+changes only the keywords, not which reviews belong to which topic. Here `min_df=5`; notebook 04a compares it with
+1 and 2.
 
 ## MMR (Maximal Marginal Relevance)
 A method that selects keywords that are relevant to a topic but not redundant with each other. A diversity
@@ -106,8 +120,8 @@ Here the review ids are replaced by keyed hashes and the author names are remove
 
 ## Random seed
 A fixed starting value for a random process, which makes its result repeatable.
-UMAP uses `random_state=42`. This makes training repeatable only in the same software environment: after the
-environment was rebuilt, retraining gave a different clustering.
+UMAP uses `random_state=42`. This makes training repeatable only in the same software environment, which is why
+the environment is recorded in a [lock file](#lock-file).
 
 ## Safetensors
 A file format for storing model weights safely, without the code-execution risks of pickle files.
@@ -137,9 +151,20 @@ Very common words with little meaning on their own, such as articles and preposi
 before counting words.
 The spaCy Italian stopword list is removed in lemmatization, topic keywords and the dashboard word analysis.
 
+## Topic coherence
+A score for how often the top keywords of a topic appear together in the same documents. Higher values usually
+mean keywords that belong together. The c_v variant, computed with gensim, usually falls between 0 and 1.
+Notebook 04a uses it to compare settings. It is a proxy: it also rewards near-synonyms and generic words, so it
+does not replace reading the topics.
+
+## Topic diversity
+The share of distinct words among the top keywords of all topics: 1.0 means no word is shared between two topics.
+Notebook 04a uses it to compare settings. Variants of the same word count as different strings, so a high value
+is not always better.
+
 ## Topic merge
 Combining two or more topics into one; the model then recomputes the keywords of the merged topic.
-In 04b, topics that share a label are merged with `merge_topics()`.
+In 04c, topics that share a label are merged with `merge_topics()`.
 
 ## Topic representation
 The description of a topic, usually its top keywords with their scores.
