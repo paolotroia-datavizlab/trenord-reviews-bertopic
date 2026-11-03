@@ -18,7 +18,7 @@ and publishes the results in an interactive Streamlit dashboard.
 - **Ratings have collapsed:** the yearly average of Italian reviews fell from 3.54★ in 2015 to 1.52★ in 2025.
 - **Developer replies stopped:** Trenord answered 83-100% of reviews each year until 2020, and less than 4% since 2022.
 - **Top app issues:** unreliable train status (1,501 reviews), ticket purchase failures (1,143) and subscription
-  renewal failures (641).
+  purchase failures (641).
 - **Mostly complaints:** 84.9% of the 5,998 informative reviews fall in App Issue topics; 1.5% are about the rail
   service rather than the app.
 - **What users like:** ease of use is the largest Praise topic (463 reviews, 4.54★).

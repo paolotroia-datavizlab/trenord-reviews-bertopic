@@ -19,7 +19,7 @@ from wordcloud import WordCloud
 # ─────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Trenord App — Review Analysis",
+    page_title="Trenord App - Review Analysis",
     page_icon="🚂",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -37,7 +37,7 @@ STOPWORDS_FILE = Path(__file__).parent / "stopwords_it.txt"
 
 STARS = [1, 2, 3, 4, 5]
 
-# One colour per star rating — red (negative) to green (positive), grey for neutral
+# One colour per star rating - red (negative) to green (positive), grey for neutral
 RATING_COLORS = {
     1: "#d9534f",
     2: "#e8825a",
@@ -97,11 +97,11 @@ def load_stopwords():
             stopwords.add(word)
     return stopwords
 
-# Informative reviews only — EXCLUDE topics already removed by notebook 04c
+# Informative reviews only - EXCLUDE topics already removed by notebook 04c
 df_analysis    = load_reviews("trenord_reviews_analysis.csv")
-# Top 5 upvoted reviews per topic — used in Deep Dive tab
+# Top 5 upvoted reviews per topic - used in Deep Dive tab
 df_top_reviews = load_reviews("top_reviews_per_topic.csv")
-# All Italian reviews with topic labels — needed for reply rate and rating
+# All Italian reviews with topic labels - needed for reply rate and rating
 # trends, which refer to all reviews and not just the informative topics
 df_full        = load_reviews("trenord_reviews_labeled.csv")
 
@@ -124,7 +124,7 @@ for cat in ALL_CATEGORIES:
 # ─────────────────────────────────────────────────────────────
 
 def complete_years(df):
-    """Rows from complete years only — used for all yearly trends."""
+    """Rows from complete years only - used for all yearly trends."""
     return df[df["year"] <= LAST_COMPLETE_YEAR]
 
 def reliable_years(df):
@@ -254,10 +254,10 @@ def topic_summary(df):
 
 # ─────────────────────────────────────────────────────────────
 # WORD ANALYSIS HELPERS
-# Defined here at module level — used in Tab 4.
+# Defined here at module level - used in Tab 4.
 # ─────────────────────────────────────────────────────────────
 
-# Domain-specific stopwords — generic words with no insight value
+# Domain-specific stopwords - generic words with no insight value
 custom_stopwords = load_stopwords() | {
     "app", "applicazione", "trenord", "treno", "treni",
     "fare", "avere", "essere", "tutto", "volta", "volte",
@@ -277,7 +277,7 @@ custom_stopwords = load_stopwords() | {
 def get_word_freq(texts, top_n=20):
     """
     Calculate most frequent meaningful words from a list of texts.
-    Uses lemmatized text — groups singular/plural variants correctly.
+    Uses lemmatized text - groups singular/plural variants correctly.
     Returns list of (word, count) tuples.
     """
     all_words = []
@@ -331,7 +331,7 @@ def get_critical_words(neg_texts, pos_texts, top_n=15):
     return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 
 # ─────────────────────────────────────────────────────────────
-# SIDEBAR — global filters
+# SIDEBAR - global filters
 # ─────────────────────────────────────────────────────────────
 
 st.sidebar.title("🚂 Trenord Reviews")
@@ -349,7 +349,7 @@ year_range = st.sidebar.slider(
     value=(min_year, max_year)
 )
 
-# Rating filter — one checkbox per star
+# Rating filter - one checkbox per star
 st.sidebar.markdown("**Rating**")
 selected_ratings = []
 rating_cols = st.sidebar.columns(len(STARS))
@@ -357,24 +357,24 @@ for star, col in zip(STARS, rating_cols):
     if col.checkbox(f"{star}★", value=True, key=f"rating_{star}"):
         selected_ratings.append(star)
 
-# Fallback — if user unchecks all show all ratings
+# Fallback - if user unchecks all show all ratings
 if not selected_ratings:
     selected_ratings = STARS
 
-# Category filter — one checkbox per category found in the data
+# Category filter - one checkbox per category found in the data
 st.sidebar.markdown("**Category**")
 selected_categories = []
 for cat in ALL_CATEGORIES:
     if st.sidebar.checkbox(CATEGORY_LABELS[cat], value=True, key=f"cat_{cat}"):
         selected_categories.append(cat)
 
-# Fallback — if user unchecks all show all categories
+# Fallback - if user unchecks all show all categories
 if not selected_categories:
     selected_categories = ALL_CATEGORIES
 
 st.sidebar.markdown("---")
 
-# Apply all filters — df_filtered is used by all tabs
+# Apply all filters - df_filtered is used by all tabs
 df_filtered = df_analysis[
     (df_analysis["year"] >= year_range[0]) &
     (df_analysis["year"] <= year_range[1]) &
@@ -382,7 +382,7 @@ df_filtered = df_analysis[
     (df_analysis["category"].isin(selected_categories))
 ].copy()
 
-# Reviews counter — warning only when filters exclude data
+# Reviews counter - warning only when filters exclude data
 total_reviews = len(df_analysis)
 shown_reviews = len(df_filtered)
 
@@ -393,7 +393,7 @@ st.sidebar.metric(
 
 if shown_reviews != total_reviews:
     st.sidebar.caption(f"of {total_reviews:,} total")
-    st.sidebar.warning("⚠️ Filters active — some data is excluded.")
+    st.sidebar.warning("⚠️ Filters active - some data is excluded.")
 else:
     st.sidebar.caption(f"All {total_reviews:,} reviews shown")
 
@@ -401,10 +401,10 @@ else:
 # PAGE TITLE
 # ─────────────────────────────────────────────────────────────
 
-st.title("🚂 Trenord App — Review Analysis")
+st.title("🚂 Trenord App - Review Analysis")
 st.markdown(
     f"Google Play Store reviews · Italian · "
-    f"{df_full['year'].min()}–{df_full['year'].max()}"
+    f"{df_full['year'].min()}-{df_full['year'].max()}"
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -419,18 +419,18 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ─────────────────────────────────────────────────────────────
-# TAB 1 — OVERVIEW
+# TAB 1 - OVERVIEW
 # ─────────────────────────────────────────────────────────────
 
 with tab1:
 
     # ── Key Findings ──────────────────────────────────────────
-    # Computed from the data at every run — not affected by filters.
+    # Computed from the data at every run - not affected by filters.
     # Topics use the informative reviews; rating and reply trends use
     # all Italian reviews and complete years only.
     st.subheader("🔑 Key Findings")
     st.caption(
-        f"Computed from the full dataset — not affected by filters. "
+        f"Computed from the full dataset - not affected by filters. "
         f"{THRESHOLD_NOTE} Last complete year: {LAST_COMPLETE_YEAR}."
     )
 
@@ -459,7 +459,7 @@ with tab1:
         else:
             top_issue = issue_topics.loc[issue_topics["count"].idxmax()]
             st.error(
-                f"🔴 **Top app issue:** {top_issue['topic_label']} — "
+                f"🔴 **Top app issue:** {top_issue['topic_label']} - "
                 f"{top_issue['count']:,} reviews, avg rating {top_issue['avg_rating']:.2f}★"
             )
         st.error(
@@ -476,7 +476,7 @@ with tab1:
         else:
             top_praise = praise_topics.loc[praise_topics["count"].idxmax()]
             st.success(
-                f"🟢 **Largest praise topic:** {top_praise['topic_label']} — "
+                f"🟢 **Largest praise topic:** {top_praise['topic_label']} - "
                 f"{top_praise['count']:,} reviews, avg rating {top_praise['avg_rating']:.2f}★"
             )
 
@@ -526,11 +526,11 @@ with tab1:
                     chart_data=yearly_reply,
                     chart_type="line",
                     border=True,
-                    help=f"All Italian reviews — not affected by filters. {THRESHOLD_NOTE}"
+                    help=f"All Italian reviews - not affected by filters. {THRESHOLD_NOTE}"
                 )
 
         with col_breakdown:
-            # Rating breakdown — horizontal stacked bar
+            # Rating breakdown - horizontal stacked bar
             rating_pcts = (
                 df_filtered["rating"]
                 .value_counts(normalize=True)
@@ -567,7 +567,7 @@ with tab1:
             st.markdown("**Rating Breakdown**")
             st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
-            # Star labels below bar — one column per star
+            # Star labels below bar - one column per star
             label_cols = st.columns(len(STARS))
             for star, col in zip(STARS, label_cols):
                 with col:
@@ -603,7 +603,7 @@ with tab1:
                 st.plotly_chart(fig, width="stretch")
 
 # ─────────────────────────────────────────────────────────────
-# TAB 2 — TOPICS
+# TAB 2 - TOPICS
 # ─────────────────────────────────────────────────────────────
 
 with tab2:
@@ -618,7 +618,7 @@ with tab2:
 
         topic_reply = df_filtered.groupby("topic_label")["has_reply"].mean().mul(100)
 
-        # Yearly rating per topic — only topic-years with enough reviews
+        # Yearly rating per topic - only topic-years with enough reviews
         topic_year_rating = (
             complete_years(df_filtered)
             .groupby(["topic_label", "year"])
@@ -639,18 +639,18 @@ with tab2:
                 st.info(f"No {ISSUE_CATEGORY} topics with the current filters.")
             else:
                 most_critical = issues.loc[issues["avg_rating"].idxmin()]
-                st.error(f"🔴 **Most critical app issue:** {most_critical['topic_label']} — avg {most_critical['avg_rating']:.2f}★")
+                st.error(f"🔴 **Most critical app issue:** {most_critical['topic_label']} - avg {most_critical['avg_rating']:.2f}★")
             st.error(f"🔴 **{pct_issues:.0f}% of reviews** belong to {ISSUE_CATEGORY} topics")
         with kf2:
-            st.warning(f"🟡 **Most discussed:** {most_discussed['topic_label']} — {most_discussed['count']:,} reviews")
-            st.success(f"🟢 **Best rated:** {best_rated['topic_label']} — avg {best_rated['avg_rating']:.2f}★")
+            st.warning(f"🟡 **Most discussed:** {most_discussed['topic_label']} - {most_discussed['count']:,} reviews")
+            st.success(f"🟢 **Best rated:** {best_rated['topic_label']} - avg {best_rated['avg_rating']:.2f}★")
 
         st.markdown("---")
 
         # ── Topic Priority Table ──────────────────────────────
         st.subheader("📋 Topic Priority Table")
         st.caption(
-            f"Ordered by average rating — worst topics first. Click any column header to sort. "
+            f"Ordered by average rating - worst topics first. Click any column header to sort. "
             f"Respects the filters. Rating trend: complete years with at least {MIN_REVIEWS_PER_YEAR} "
             f"reviews in the topic."
         )
@@ -708,13 +708,13 @@ with tab2:
     # ── Developer Reply Rate over Time ────────────────────────
     st.subheader("💬 Developer Reply Rate over Time")
     st.caption(
-        f"All Italian reviews — not affected by filters. "
+        f"All Italian reviews - not affected by filters. "
         f"Only years with at least {MIN_REVIEWS_PER_YEAR} reviews are shown."
     )
     st.plotly_chart(reply_rate_over_time_chart(df_full), width="stretch")
 
 # ─────────────────────────────────────────────────────────────
-# TAB 3 — DEEP DIVE
+# TAB 3 - DEEP DIVE
 # ─────────────────────────────────────────────────────────────
 
 with tab3:
@@ -722,15 +722,15 @@ with tab3:
     st.subheader("🔍 Topic Deep Dive")
     st.caption("Select a topic to explore in detail. All values respect the filters.")
 
-    # Topic selector — local filter, applies only to this tab
+    # Topic selector - local filter, applies only to this tab
     all_topics     = sorted(df_analysis["topic_label"].dropna().unique().tolist())
     selected_topic = st.selectbox("Select a topic", options=all_topics, index=0)
 
-    # Category badge — immediate visual signal
+    # Category badge - immediate visual signal
     category = df_analysis.loc[df_analysis["topic_label"] == selected_topic, "category"].iloc[0]
     st.badge(category, color=CATEGORY_STYLES.get(category, DEFAULT_CATEGORY_STYLE)[1])
 
-    # Filter for selected topic — respects sidebar filters
+    # Filter for selected topic - respects sidebar filters
     topic_df = df_filtered[df_filtered["topic_label"] == selected_topic]
 
     if topic_df.empty:
@@ -810,7 +810,7 @@ with tab3:
         # ── Most Upvoted Reviews ──────────────────────────────
         st.subheader("📌 Most Upvoted Reviews")
 
-        # Use pre-computed top reviews — fallback to filtered data
+        # Use pre-computed top reviews - fallback to filtered data
         topic_top = df_top_reviews[df_top_reviews["topic_label"] == selected_topic]
 
         if topic_top.empty:
@@ -837,7 +837,7 @@ with tab3:
                     st.write(row["text"])
 
 # ─────────────────────────────────────────────────────────────
-# TAB 4 — WORDS
+# TAB 4 - WORDS
 # ─────────────────────────────────────────────────────────────
 
 with tab4:
@@ -857,11 +857,11 @@ with tab4:
 
         # ── Section 1: Top Keywords ───────────────────────────
         # Most frequent words in negative reviews only.
-        # Positive keywords excluded — not useful for identifying problems.
+        # Positive keywords excluded - not useful for identifying problems.
         st.subheader("📊 Top Keywords in Negative Reviews")
         st.caption(
             f"Most frequent words in 1-2★ reviews ({len(neg_df):,} reviews) "
-            f"— lemmatized to group word variants."
+            f"- lemmatized to group word variants."
         )
 
         neg_freq = get_word_freq(neg_lemmatized, top_n=20)
@@ -908,7 +908,7 @@ with tab4:
                 fig_wc, ax = plt.subplots(figsize=(8, 5.5))
                 ax.imshow(wc, interpolation="bilinear")
                 ax.axis("off")
-                ax.set_title("Word Cloud — Top Keywords", fontsize=14, pad=10)
+                ax.set_title("Word Cloud - Top Keywords", fontsize=14, pad=10)
                 plt.tight_layout()
                 st.pyplot(fig_wc)
                 plt.close(fig_wc)
@@ -917,7 +917,7 @@ with tab4:
 
         # ── Section 2: Critical Words ─────────────────────────
         # Words that appear disproportionately more in negative reviews
-        # than positive ones — normalized frequency ratio.
+        # than positive ones - normalized frequency ratio.
         st.subheader("⚠️ Critical Words")
         st.caption(
             "Words that appear disproportionately more in negative reviews "
@@ -932,7 +932,7 @@ with tab4:
         else:
             crit_df = pd.DataFrame(critical_words)
 
-            # Bar chart — full width
+            # Bar chart - full width
             fig = go.Figure(go.Bar(
                 x=crit_df["score"],
                 y=crit_df["word"],
@@ -950,7 +950,7 @@ with tab4:
                 customdata=crit_df[["neg_count", "pos_count"]].values
             ))
             fig.update_layout(
-                title=f"Top {len(crit_df)} Critical Words — Normalized Frequency Ratio",
+                title=f"Top {len(crit_df)} Critical Words - Normalized Frequency Ratio",
                 xaxis_title="Score (higher = more distinctive of negative reviews)",
                 yaxis=dict(autorange="reversed"),
                 plot_bgcolor="white",
@@ -959,8 +959,8 @@ with tab4:
             )
             st.plotly_chart(fig, width="stretch")
 
-            # Trend chart — full width below bar chart
-            st.markdown("**Trend over time — top 5 critical words**")
+            # Trend chart - full width below bar chart
+            st.markdown("**Trend over time - top 5 critical words**")
             st.caption("Mentions per complete year for the 5 most critical words.")
 
             top5_critical = [row["word"] for row in critical_words[:5]]

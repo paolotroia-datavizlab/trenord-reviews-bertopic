@@ -567,7 +567,7 @@ topics.
 | Unreliable Train Status | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 |
 | Ticket Purchase Failures | App Issue | 1 | 1,143 | 19.1% | 1.41 |
 | App Crashes & Freezes | App Issue | 4, 15 | 655 | 10.9% | 1.61 |
-| Subscription Renewal Failures | App Issue | 2 | 641 | 10.7% | 1.44 |
+| Subscription Purchase Failures | App Issue | 2 | 641 | 10.7% | 1.44 |
 | Poor Usability | App Issue | 3 | 499 | 8.3% | 1.43 |
 | Ease of Use | Praise | 8, 11, 20, 24 | 463 | 7.7% | 4.54 |
 | Login & Account Issues | App Issue | 5, 22 | 289 | 4.8% | 1.40 |
@@ -887,7 +887,7 @@ This is the main file of the dashboard.
 | `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
 | `text_lemmatized` | string | Lemmas without stopwords. Empty when no token survives (9 rows). | - |
 | `topic` | int | Topic id of the 04b model; the 21 ids kept by the label map (§9). | `0`, `2`, `22` |
-| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Unreliable Train Status`, `Subscription Renewal Failures` |
+| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Unreliable Train Status`, `Subscription Purchase Failures` |
 | `category` | string | `App Issue`, `Praise`, `Rail Service` or `App Updates`. Never empty. | `App Issue`, `Praise`, `App Updates` |
 | `topic_merged` | int | Post-merge topic id; 13 distinct values in 0-20, one per label. | `0`, `1`, `12` |
 
