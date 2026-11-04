@@ -701,7 +701,7 @@ specific words together are much less likely to survive in a topic that has chan
 
 Cell 8 then gives every review the label and category of its topic. `map()` looks up each topic number in a
 dictionary and returns its value, so all reviews of topic 6 get "Unreliable Train Status". 13 labels besides
-EXCLUDE, 5,998 reviews kept and 953 excluded.
+EXCLUDE, 5,998 reviews kept and 953 excluded, a share of 13.7%.
 
 ### Merges
 Topics with the same label are merged. The merge list is built from the label map, so the two cannot disagree:
