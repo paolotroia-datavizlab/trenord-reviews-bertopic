@@ -17,11 +17,13 @@ and publishes the results in an interactive Streamlit dashboard.
 
 - **Ratings have collapsed:** the yearly average of Italian reviews fell from 3.54★ in 2015 to 1.52★ in 2025.
 - **Developer replies stopped:** Trenord answered 83-100% of reviews each year until 2020, and less than 4% since 2022.
-- **Top app issues:** unreliable train status (1,501 reviews), ticket purchase failures (1,143) and subscription
-  purchase failures (641).
-- **Mostly complaints:** 84.9% of the 5,998 informative reviews fall in App Issue topics; 1.5% are about the rail
-  service rather than the app.
+- **Top app issues:** unreliable train status (1,501 reviews), ticket purchase failures (1,143), crashes and
+  freezes (655) and subscription purchase failures (641).
+- **Mostly complaints:** 84.9% of the 5,998 informative reviews fall in App Issue topics, all rated between 1.40★
+  and 1.85★ with overlapping 95% confidence intervals; 1.5% are about the rail service rather than the app.
 - **What users like:** ease of use is the largest Praise topic (463 reviews, 4.54★).
+- **Read with care:** the 953 excluded reviews are short verdicts, 55.2% with 5★ and 27.5% with 1★, so the analysed
+  reviews are more negative than all Italian reviews (1.93★ against 2.17★).
 
 ## Tech stack
 
@@ -42,7 +44,12 @@ notebooks/        pipeline, run in this order:
   04a_model_selection.ipynb            compare BERTopic settings
   04b_topic_modeling_training.ipynb    train BERTopic
   04c_topic_modeling_analysis.ipynb    label the topics, export the dashboard files
-reports/figures/  charts from the analysis and the dashboard screenshot
+reports/figures/  charts and the dashboard screenshot:
+  six charts from 03                   ratings and developer replies over time
+  chart_reviews_per_topic.png          04c: reviews per topic
+  chart_avg_rating_per_topic.png       04c: average rating per topic, with 95% confidence intervals
+  chart_keywords_per_topic.png         04c: top keywords of each topic
+  dashboard_overview.png               dashboard screenshot
 tests/            dashboard smoke tests (Streamlit AppTest)
 ```
 
@@ -56,6 +63,11 @@ streamlit run dashboard/app.py
 ```
 
 To run the tests: `pip install pytest`, then `pytest tests/` from the repository root.
+
+There are three requirements files. `requirements.txt` holds the dashboard dependencies, used by Streamlit Cloud and
+by the tests; `requirements-notebooks.txt` pins the packages the notebooks use directly; and
+`requirements-notebooks.lock.txt` lists every package of the environment with its exact version, so it can be
+rebuilt as it was.
 
 To run the notebooks, install their dependencies and create `.env` with your own pseudonymization key:
 

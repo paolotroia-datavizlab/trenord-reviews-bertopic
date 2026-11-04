@@ -52,6 +52,7 @@ flowchart TD
     N04c --> ANA[("trenord_reviews_analysis.csv")]
     N04c --> TOP[("top_reviews_per_topic.csv")]
     N04c --> FINAL[("bertopic_model_final<br/>local only")]
+    N04c --> PNG2["three charts in reports/figures"]
     LAB --> DASH["dashboard/app.py, Streamlit"]
     ANA --> DASH
     TOP --> DASH
@@ -66,15 +67,19 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `data/raw/trenord_reviews_raw.csv` | 01 | no (gitignored) |
 | `trenord_reviews_anon.csv` | 01b | no |
 | `trenord_reviews_clean.csv` | 02 | no |
-| `reports/figures/chart_*.png` (6 charts) | 03 | yes |
+| six charts in `reports/figures/` (§6) | 03 | yes |
 | `reports/figures/dashboard_overview.png` (dashboard screenshot) | - | yes |
 | none (metric tables in the notebook only) | 04a | - |
 | `trenord_reviews_topics.csv` | 04b | no |
 | `bertopic_model/` | 04b | no |
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 04c | yes |
 | `bertopic_model_final/` | 04c | no |
+| `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png` | 04c | yes |
 
 All CSVs are written with `encoding="utf-8-sig"` and `index=False`.
+
+There are two BERTopic models. `bertopic_model/` is trained by 04b and read by 04c. `bertopic_model_final/` is the
+same model after the merges in 04c, saved for reuse; no other step reads it (§9).
 
 ---
 
@@ -114,8 +119,10 @@ This table is the single source of numbers for the article. **All languages** fi
 | Excluded | 9 topics, 953 reviews (**13.7%** of Italian reviews) |
 | Analysis set | 5,998 reviews |
 | Category split | App Issue 5,090 (84.9%) · Praise 740 (12.3%) · Rail Service 87 (1.5%) · App Updates 81 (1.4%) |
-| Bias check: average rating | excluded 3.66 · included 1.93 · all Italian 2.17 |
-| Bias check: share of 4-5★ | excluded 67.7% · included 18.8% |
+| Bias check: average rating | excluded 3.66 · analysed 1.93 · all Italian 2.17 |
+| Bias check: rating shares, excluded | 1★ 27.5% · 2★ 2.0% · 3★ 2.8% · 4★ 12.5% · 5★ 55.2% |
+| Bias check: rating shares, analysed | 1★ 62.3% · 2★ 12.0% · 3★ 6.9% · 4★ 7.8% · 5★ 11.0% |
+| Bias check: share excluded per year | from 7.4% (2017) to 23.8% (2020), peak in 2019-2021 (18.6%, 23.8%, 17.3%) |
 
 ---
 
@@ -329,6 +336,9 @@ Overall figures are in Key numbers (all languages column).
 ### Design decisions
 - **Line charts for averages and rates.** Bars would suggest a zero baseline. The y axis covers the full 1-5 scale.
 - **Incomplete year in grey and dashed**, so it is not read as a real decline.
+- **[Okabe-Ito](glossary.md#okabe-ito-palette) colours**, which stay distinct for readers with colour vision
+  deficiency: blue `#0072B2` for single series, vermillion `#D55E00` for annotations, and a 1-5 star scale
+  `#D55E00`, `#E69F00`, `#999999`, `#66C5AB`, `#009E73`. The dashboard uses the same colours.
 - **The star rating is the sentiment signal.** It is available for every review and given by the author. A separate
   sentiment classifier was considered unnecessary.
 
@@ -448,8 +458,9 @@ from these pairs and from rare variants, which count as different strings.
 ## 8. Notebook 04b - Topic model training
 
 **In plain words.** This notebook reads the Italian reviews and lets an algorithm group together the reviews that
-talk about similar things, without being told the themes in advance. It saves the model and the group of each
-review. In the recorded environment, training again gives exactly the same groups.
+talk about similar things, without being told the themes in advance. It shows how the groups are named and how
+similar they are, checks the result and saves the model and the group of each review. In the recorded environment,
+training again gives exactly the same groups.
 
 ### Input and output
 - Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`.
@@ -459,8 +470,9 @@ review. In the recorded environment, training again gives exactly the same group
     `save_embedding_model="paraphrase-multilingual-mpnet-base-v2"` ([safetensors](glossary.md#safetensors)).
 
 ### Method (parameters verbatim)
-1. Load the data and keep the Italian reviews (cell 2).
-2. Prepare the `text_clean` texts. Empty or missing texts are replaced by `" "`; there were none in this run (cell 3).
+1. Load the data: 7,329 reviews, 6,951 of them in Italian (cell 2).
+2. Prepare the `text_clean` texts of the Italian reviews. Empty or missing texts are replaced by `" "`; there were
+   none in this run (cell 3).
 3. Configure the model (cell 4):
    - embeddings from the [sentence transformer](glossary.md#sentence-transformer)
      `SentenceTransformer("paraphrase-multilingual-mpnet-base-v2")`;
@@ -470,12 +482,64 @@ review. In the recorded environment, training again gives exactly the same group
      spaCy's Italian stopwords;
    - [MMR](glossary.md#mmr-maximal-marginal-relevance): `MaximalMarginalRelevance(diversity=0.3)`;
    - BERTopic: `top_n_words=10, language="multilingual", calculate_probabilities=False`.
-4. Train with `fit_transform(texts)`: 30 topics and 1,601 outliers, which get topic −1 (cell 5).
+4. Train with `fit_transform(texts)`: 30 topics and 1,601 outliers, which get topic -1 (cell 5).
 5. [Reduce outliers](glossary.md#outlier-reduction) with
    `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 6).
 6. Update the [topic representations](glossary.md#topic-representation), with c-TF-IDF keywords:
-   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)` (cell 7).
-7. Save the model and the topic assignments (cell 8).
+   `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)`
+   (cell 7). Both models are passed again on purpose. Without them `update_topics` builds a plain
+   `CountVectorizer(ngram_range=(1, 1))`, with no stopwords, no bigrams and no `min_df`, and drops MMR, so the
+   keywords would no longer follow the settings of cell 4.
+7. Show how BERTopic names the topics (cell 8).
+8. Draw the keywords of the largest topics (cells 9-10) and the topic tree (cells 11-12).
+9. Check the results before saving (cell 13).
+10. Save the model and the topic assignments (cell 14).
+
+### Automatic topic names
+`get_topic_info()` returns one row per topic with the columns `Topic`, `Count`, `Name`, `Representation` and
+`Representative_Docs`. Cell 8 shows the first 5 rows without `Representative_Docs`, because that column holds real
+review texts and notebook outputs are published.
+
+The `Name` column is not chosen by anyone. BERTopic stores it in `topic_labels_`: the topic number followed by its
+first 4 keywords, joined with underscores. For topic 0 the 10 keywords start with `treni, treno, ritardi, app`, so its
+name is `0_treni_treno_ritardi_app`. The cell rebuilds the same name by hand and prints both. The human labels are
+given later, in 04c.
+
+### Visualizations and how to read them
+- **Keyword bar charts** (`visualize_barchart(top_n_topics=8, n_words=5)`, cell 9). One panel for each of the 8
+  largest topics, with its top 5 keywords. A longer bar means a higher c-TF-IDF weight, so a word more typical of
+  that topic. The panels shown are topics 0, 1, 2, 3, 4, 5, 6 and 8. Topic 7 (173 reviews) is left out because
+  topic 8 has 176.
+- **Topic tree** (`visualize_hierarchy()`, cell 11). The 30 topics are the leaves on the left; branches join to the
+  right as topics become less similar. Two topics joined close to the leaves are similar. Similarity is computed on
+  the c-TF-IDF keywords, not on what users think: topic 12 (praise for buying tickets) sits next to topic 1 (failed
+  purchases) because both use words like "biglietti" and "acquisto". The tree places the topics merged in 04c next
+  to each other (0, 6 and 29; 5 and 22; 8, 11, 20 and 24), but the merges also rely on ratings and on reading the
+  reviews.
+
+Both charts are plotly figures saved in the notebook. With them the notebook is 94,756 bytes.
+
+### Check before saving
+Cell 13 stops the notebook with an `assert` before any file is overwritten if:
+- the `topic` column is missing, or the table and the texts have a different number of rows;
+- any review still has topic -1 after the reduction;
+- the table and the model have a different number of topics.
+
+In this run it printed 6,951 reviews, 30 topics, 0 outliers and "All checks passed".
+
+### What safetensors saves
+The model is saved in [safetensors](glossary.md#safetensors) format instead of pickle. A pickle file can run code
+when it is loaded; safetensors stores only numbers. The folder holds:
+- `topics.json`: the topic of every review, the topic sizes, the keywords with their weights and the automatic names;
+- `topic_embeddings.safetensors`: one vector per topic;
+- `ctfidf.safetensors` and `ctfidf_config.json`: the c-TF-IDF word counts and the vectorizer settings with its
+  vocabulary, so 04c can recompute the keywords after merging topics;
+- `config.json`: the BERTopic settings and the name of the embedding model.
+
+It does not save the UMAP and HDBSCAN models, the MMR representation model or the weights of the embedding model,
+which is reloaded by name. A reloaded model can still assign new reviews by similarity to the topic vectors, but not
+with the original clustering. That is enough here, because 04c works only on the reviews already assigned, and it
+sets MMR again before merging.
 
 ### Parameters
 
@@ -502,47 +566,56 @@ review. In the recorded environment, training again gives exactly the same group
 - **MMR** reduces redundant keywords, such as the singular and plural of the same word.
 - **Training separated from labeling.** An earlier single notebook (19 final topics) was replaced by separate
   training and labeling notebooks, so the labels can be checked against the exact model they were written for.
-- **No frozen mode.** Earlier versions kept a [frozen model](glossary.md#frozen-model) and rebuilt `topics.csv`
-  from it instead of retraining. After the venv was rebuilt on 2026-11-02, retraining with the same code and data
-  gave a different clustering:
+- **Retrained in a recorded environment.** After the venv was rebuilt on 2026-11-02, retraining with the same code
+  and data gave a different clustering from the earlier model:
   - 6,428 of 6,951 rows had a different topic id;
   - 92.1% of rows agreed under the best matching between old and new topics;
   - the adjusted Rand index was 0.81.
 
-  The environment of the frozen model had not been recorded, so it could not be rebuilt. The frozen mode was
-  removed, the model was retrained, the environment was recorded in a [lock file](glossary.md#lock-file) and the
-  labels in 04c were rebuilt for the new topic ids. The old frozen model is kept only as a local backup outside the
-  repository.
+  The environment of the earlier model had not been recorded, so it could not be rebuilt. The model was retrained,
+  the environment was recorded in a [lock file](glossary.md#lock-file) and the labels in 04c were rebuilt for the
+  new topic ids. The earlier model is kept only as a local backup outside the repository.
+- **Representative documents are never printed.** They are real review texts, and the notebook outputs are
+  published.
 
 ### Validation
 - 30 topics, with sizes from 52 to 1,214 reviews; 1,601 outliers before reduction, 0 after.
+- The check before saving passes.
 - **Retraining is reproducible in the locked environment.** Consecutive trainings on 2026-11-02 gave the same topic
   for every review, the same sizes and the same keyword weights. The run with `min_cluster_size=30` in 04a, with
   precomputed embeddings, was checked once against this model and gave the same topic for every review (§7).
+- **Rerun of 2026-11-04** in a fresh kernel, after the cells of steps 7-9 were added: same topic for every review,
+  same 30 topics with the same sizes, same keywords. `trenord_reviews_topics.csv` and the model files are
+  byte-identical to the previous run, except for the order in which the 624 stopwords are listed in
+  `ctfidf_config.json`; the vocabulary is the same.
 
 ### Known limitations
 - Each review gets one topic, although many mention several issues.
 - Retraining is reproducible only in the locked environment. A different environment can number and size the
-  topics differently, which the guard in 04c catches.
+  topics differently, which the keyword check of the label map in 04c catches.
 - Some topics are dominated by short, generic reviews (see the exclusion rule in 04c).
+- The topic tree measures how similar the keywords are, not how similar the opinions are.
 
 ---
 
 ## 9. Notebook 04c - Topic labeling and export
 
-**In plain words.** This notebook gives each group of reviews a short human name and one of four categories, and
-sets aside groups made of very short reviews that say nothing specific. It then saves the files used by the
-dashboard and checks that no personal data has slipped through.
+**In plain words.** In 04b the model grouped the Italian reviews into 30 topics, each identified only by a number.
+This notebook reads every topic, gives it a short name and a category, or sets it aside when its reviews say nothing
+specific. It merges topics with the same name, draws three charts, checks how much the excluded reviews change the
+picture, and saves the files used by the dashboard after checking that no personal data has slipped through.
 
 ### Input and output
-- Input: `trenord_reviews_topics.csv` and `bertopic_model/`. `trenord_reviews_clean.csv` is used only to check
-  `reply_text`.
+- Input: `trenord_reviews_topics.csv` and `bertopic_model/`, both from 04b. `trenord_reviews_clean.csv` is used only
+  in the final privacy check.
 - Output:
   - `trenord_reviews_labeled.csv`: adds `topic_label`, `category`, `topic_merged`.
   - `trenord_reviews_analysis.csv`: EXCLUDE rows removed.
   - `top_reviews_per_topic.csv` (`topic_label, category, rating, thumbs_up, date, text`): the 5 most upvoted reviews
     with at least one upvote, for each of the 13 topics.
   - `bertopic_model_final/`: the model after the merges.
+  - Three charts in `reports/figures/`, saved with `dpi=150`: `chart_reviews_per_topic.png`,
+    `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`.
 
 ### Categories
 The categories are the project's own, chosen after reading the topics:
@@ -555,52 +628,190 @@ No topic is made mostly of requests for new features: requests exist in the revi
 topics.
 
 ### Method
-1. Load the data and the model, and run the **guard** (cell 3):
-   - topic ids in `topics.csv` and in the model must be exactly 0-29;
-   - sizes in both must match a hardcoded `expected_sizes`;
-   - model assignments must match `topics.csv` row by row.
+1. Load the reviews and the model. Every review must be Italian (cell 3).
+2. Check that the file and the model agree: the topic of every review in `topics.csv` must equal the one stored in
+   the model, otherwise one of the two was replaced after 04b (cell 4).
+3. Build the topic overview table, the evidence behind the labels (cell 5).
+4. Write the label map, with two [identifying keywords](glossary.md#identifying-keywords) per topic (cell 6), and
+   check it (cell 7).
+5. Apply the labels with `map()` (cell 8).
+6. Derive the merge list from the labels (cell 9), merge (cell 10) and check the merge (cell 11).
+7. Build the final topics table with 95% confidence intervals and the category table (cell 12).
+8. Draw the three charts, each followed by how to read it (cells 13-18).
+9. Run the two bias checks (cells 19-20), read in cell 21.
+10. Save the outputs (cell 22) and check the saved files (cells 23-24). The results are summarised in cell 25.
 
-   Any failure raises an error explaining that the model changed and the label map must be rebuilt.
-2. Document the labeling decisions in the notebook (cell 4).
-3. Build the label map `LABEL_GROUPS` of `(ids, label, category)`, keyed on the 04b topic ids; an assertion checks
-   that every id 0-29 appears exactly once (cell 5).
-4. Merge topics with `TOPICS_TO_MERGE = [[0, 6, 29], [4, 15], [8, 11, 20, 24], [5, 22], [12, 17]]`.
-   The list must equal the multi-topic groups of the label map. MMR (`diversity=0.3`) is restored, and
-   `merge_topics(texts, TOPICS_TO_MERGE)` updates the keywords and embeddings of the saved model only. Every
-   post-merge topic must hold a single label, and every kept label a single post-merge topic (cell 6).
-5. Print the final distribution (cell 7) and run the bias check (cell 8).
-6. Save the outputs (cell 9) and check them (cell 10). The results are summarised in cell 11.
+### Topic overview table
+One row per 04b topic with what was looked at to label it. Review texts are not shown, because notebook outputs are
+published; the reading itself was done outside the notebook (`labeling/`, gitignored).
+
+| Column | Meaning |
+|---|---|
+| `reviews` | number of reviews in the topic |
+| `avg rating` | average star rating |
+| `1-2 stars (%)`, `4-5 stars (%)` | share of negative and positive reviews |
+| `5 words or fewer (%)` | share of very short reviews, the measure behind the exclusion rule |
+| `top keywords` | the first 5 keywords of the topic |
+
+For example topic 10 has 164 reviews, 99.4% of them with 5 words or fewer and 100.0% with 4-5 stars, while topic 1
+has 1,143 reviews, 1.7% short and 88.9% with 1-2 stars.
+
+### Label map and keyword check
+`TOPIC_LABELS` maps each of the 30 topic ids of the 04b model to `(label, category, identifying keywords)`. The
+label is `EXCLUDE` for the topics set aside, which have no category.
+
+| Topic | Label | Category | Identifying keywords |
+|---:|---|---|---|
+| 0 | Unreliable Train Status | App Issue | treni, ritardi |
+| 1 | Ticket Purchase Failures | App Issue | biglietti, errore |
+| 2 | Subscription Purchase Failures | App Issue | pagamento, abbonamenti |
+| 3 | Poor Usability | App Issue | lenta, difficile |
+| 4 | App Crashes & Freezes | App Issue | aggiornamento, android |
+| 5 | Login & Account Issues | App Issue | login, account |
+| 6 | Unreliable Train Status | App Issue | ritardi, ritardi cancellazioni |
+| 7 | Station & Favorites Bugs | App Issue | stazioni, stazioni preferite |
+| 8 | Ease of Use | Praise | app comoda, app facile |
+| 9 | EXCLUDE | - | ottima applicazione, utilissima |
+| 10 | EXCLUDE | - | ottima, perfetta |
+| 11 | Ease of Use | Praise | facile, intuitivo |
+| 12 | Easy Purchase & Payment | Praise | biglietti, facile |
+| 13 | QR Code Failures | App Issue | codice, metro |
+| 14 | EXCLUDE | - | ottimo, complimenti |
+| 15 | App Crashes & Freezes | App Issue | aggiornamento, bug |
+| 16 | EXCLUDE | - | funziona funziona, funzionante |
+| 17 | Easy Purchase & Payment | Praise | pagamento, rapido |
+| 18 | Version Comparisons | App Updates | migliorata, migliorare |
+| 19 | Rail Service Complaints | Rail Service | servizio pessimo, azienda |
+| 20 | Ease of Use | Praise | efficiente, rapida |
+| 21 | EXCLUDE | - | dovere, sufficiente |
+| 22 | Login & Account Issues | App Issue | registrare, profilo |
+| 23 | EXCLUDE | - | ottima app, buona app |
+| 24 | Ease of Use | Praise | facile veloce, semplice veloce |
+| 25 | EXCLUDE | - | pessima pessima, negativa |
+| 26 | EXCLUDE | - | funziona, impossibile utilizzare |
+| 27 | EXCLUDE | - | pessima pessima, disastrosa |
+| 28 | Missing Stations | App Issue | milano, alcune stazioni |
+| 29 | Unreliable Train Status | App Issue | ritardi, app aggiornata |
+
+Cell 7 checks that the map has exactly the topics of the model, and that both identifying keywords of every topic
+are still among its top 10 keywords. If the model is retrained and its topics change, some keyword is missing and the
+notebook stops with the list of what was not found. In this run all 30 topics were found and 0 keywords were
+missing. Two keywords are used because one common word, such as "app", could appear in many topics by chance; two
+specific words together are much less likely to survive in a topic that has changed.
+
+Cell 8 then gives every review the label and category of its topic. `map()` looks up each topic number in a
+dictionary and returns its value, so all reviews of topic 6 get "Unreliable Train Status". 13 labels besides
+EXCLUDE, 5,998 reviews kept and 953 excluded.
+
+### Merges
+Topics with the same label are merged. The merge list is built from the label map, so the two cannot disagree:
+
+| Label | Topics merged |
+|---|---|
+| Unreliable Train Status | 0, 6, 29 |
+| App Crashes & Freezes | 4, 15 |
+| Login & Account Issues | 5, 22 |
+| Ease of Use | 8, 11, 20, 24 |
+| Easy Purchase & Payment | 12, 17 |
+
+MMR (`diversity=0.3`) is set again, because the saved model does not keep it, and
+`merge_topics(texts, topics_to_merge)` is called. It changes only the model: its topic of every review, sizes,
+keywords and topic vectors. The labels stay attached to the original 04b ids in `topic`, and the new numbers, which
+BERTopic assigns by size, go in their own column, `topic_merged`. After the merge the model has 22 topics: the 13
+labels plus the 9 excluded topics, which are left as they are. Cell 11 checks that every merged topic holds one label
+and every kept label is one merged topic.
 
 ### Final topics
 
-| Label | Category | Topic ids | Reviews | Share | Avg ★ |
-|---|---|---|---:|---:|---:|
-| Unreliable Train Status | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 |
-| Ticket Purchase Failures | App Issue | 1 | 1,143 | 19.1% | 1.41 |
-| App Crashes & Freezes | App Issue | 4, 15 | 655 | 10.9% | 1.61 |
-| Subscription Purchase Failures | App Issue | 2 | 641 | 10.7% | 1.44 |
-| Poor Usability | App Issue | 3 | 499 | 8.3% | 1.43 |
-| Ease of Use | Praise | 8, 11, 20, 24 | 463 | 7.7% | 4.54 |
-| Login & Account Issues | App Issue | 5, 22 | 289 | 4.8% | 1.40 |
-| Easy Purchase & Payment | Praise | 12, 17 | 277 | 4.6% | 3.98 |
-| Station & Favorites Bugs | App Issue | 7 | 173 | 2.9% | 1.68 |
-| QR Code Failures | App Issue | 13 | 118 | 2.0% | 1.59 |
-| Rail Service Complaints | Rail Service | 19 | 87 | 1.5% | 1.17 |
-| Version Comparisons | App Updates | 18 | 81 | 1.4% | 3.63 |
-| Missing Stations | App Issue | 28 | 71 | 1.2% | 1.85 |
+| Label | Category | Topic ids | Reviews | Share | Avg ★ | 95% CI |
+|---|---|---|---:|---:|---:|---|
+| Unreliable Train Status | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 | 1.72-1.84 |
+| Ticket Purchase Failures | App Issue | 1 | 1,143 | 19.1% | 1.41 | 1.36-1.46 |
+| App Crashes & Freezes | App Issue | 4, 15 | 655 | 10.9% | 1.61 | 1.53-1.69 |
+| Subscription Purchase Failures | App Issue | 2 | 641 | 10.7% | 1.44 | 1.37-1.51 |
+| Poor Usability | App Issue | 3 | 499 | 8.3% | 1.43 | 1.35-1.51 |
+| Ease of Use | Praise | 8, 11, 20, 24 | 463 | 7.7% | 4.54 | 4.45-4.62 |
+| Login & Account Issues | App Issue | 5, 22 | 289 | 4.8% | 1.40 | 1.31-1.49 |
+| Easy Purchase & Payment | Praise | 12, 17 | 277 | 4.6% | 3.98 | 3.82-4.14 |
+| Station & Favorites Bugs | App Issue | 7 | 173 | 2.9% | 1.68 | 1.52-1.85 |
+| QR Code Failures | App Issue | 13 | 118 | 2.0% | 1.59 | 1.42-1.76 |
+| Rail Service Complaints | Rail Service | 19 | 87 | 1.5% | 1.17 | 1.02-1.33 |
+| Version Comparisons | App Updates | 18 | 81 | 1.4% | 3.63 | 3.35-3.91 |
+| Missing Stations | App Issue | 28 | 71 | 1.2% | 1.85 | 1.53-2.16 |
 
 Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion totals are in Key numbers.
+
+**Confidence intervals.** For each label the notebook computes the [standard error](glossary.md#standard-error) of
+the average rating, `ratings.std() / np.sqrt(n)`, and the 95% margin `t.ppf(0.975, n - 1) * standard_error` from
+the [t distribution](glossary.md#t-distribution); the [confidence interval](glossary.md#confidence-interval) is the
+average plus or minus the margin. Ratings are treated as independent. They are ordinal (1 to 5 stars), and the mean
+is used as is common for star ratings. The intervals show that the App Issue averages overlap, while the two Praise
+topics and Version Comparisons are clearly above them.
+
+### Charts and how to read them
+All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
+`#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`.
+- **`chart_reviews_per_topic.png`** (cell 13). Horizontal bars, largest topic at the top, with the number of reviews
+  and the share of the analysis set at the end of each bar. App Issue covers 9 of the 13 topics and 84.9% of the
+  reviews.
+- **`chart_avg_rating_per_topic.png`** (cell 15). A dot for each average with its 95% interval as a horizontal line,
+  on the full 1-5 axis, and a dashed line for the average of all analysed reviews (1.93). Dots are used instead of
+  bars because a bar suggests a value that starts from zero, while ratings start from 1. A short line means a precise
+  average; Missing Stations (71 reviews) has the longest.
+- **`chart_keywords_per_topic.png`** (cell 17). One panel per final topic with its top 5 keywords from the merged
+  model. Bar length is the c-TF-IDF weight. It can be compared within a panel, not between panels, so the axis has no
+  numbers. Singular and plural appear as separate words ("biglietti" and "biglietto") because the keywords come from
+  the text without lemmatization. The top word of Poor Usability is "funziona", which confirms that topic 3 is
+  borderline.
+
+### Bias checks
+- **Ratings of excluded and analysed reviews** (cell 19). The excluded reviews average 3.66 stars, the analysed ones
+  1.93, all Italian reviews 2.17. The excluded reviews are short verdicts at both ends of the scale: 55.2% have 5
+  stars and 27.5% have 1 star. The analysed ones are mostly negative: 62.3% have 1 star. The full shares are in Key
+  numbers. Removing the excluded reviews makes the analysis set more negative than all Italian reviews, an
+  [exclusion bias](glossary.md#exclusion-bias): the topics describe what users write about when they say something
+  specific, not overall satisfaction.
+- **Share excluded per year** (cell 20). It goes from 7.4% in 2017 to 23.8% in 2020, with a peak between 2019 and
+  2021 (18.6%, 23.8%, 17.3%). Overall rating trends use all reviews and are not affected. Trends of single topics over
+  time use only the analysed reviews, so in 2019-2021 they rest on a smaller part of each year's reviews.
+
+### Output checks
+
+| Check | Result |
+|---|---|
+| Every review in `topics.csv` is Italian | PASS |
+| Same topic for every review in `topics.csv` and in the model | PASS |
+| The label map has exactly the 30 topics of the model | PASS |
+| Both identifying keywords of every topic among its top 10 keywords | PASS (0 missing) |
+| No review without a label | PASS |
+| Merged topics | 22; each holds one label, and each kept label is one merged topic |
+| No `author` column in any output | PASS |
+| `review_id` pseudonymised (12 hex characters) for every row | PASS |
+| Every review found in clean.csv, `reply_text` identical | PASS |
+| 13 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
+
+### The two models
+- **`bertopic_model/`** is trained and saved by 04b and read by 04c. Its topic ids are the ones the label map refers
+  to.
+- **`bertopic_model_final/`** is saved by 04c after the merges, in the same format. It has 22 topics and the
+  keywords of the merged topics, the ones shown in chart 3. It is kept for reuse, for example to look at the merged
+  topics again, and no other step of the pipeline reads it.
+
+Both are local only and gitignored.
 
 ### Design decisions
 - **Label map keyed on the 04b topic ids.** `merge_topics()` renumbers all topics by size.
   - An earlier version keyed its labels on post-merge ids of an earlier model. After the 2026-09-01 rescrape and
     retraining, those labels pointed to the wrong topics without any error.
-  - Ids from 04b plus the guard turn that silent failure into an explicit error.
+  - Ids from 04b plus the identifying keywords turn that silent failure into an explicit error.
+- **Identifying keywords instead of fixed topic sizes.** The check compares what a topic is about, not how many
+  reviews it has, so it catches a changed model even if the sizes happen to be similar.
+- **Merge list derived from the labels.** It cannot disagree with the label map.
 - **Exclusion rule.** A topic is excluded when it consists mostly of very short reviews (about five words or fewer)
   with generic sentiment and no indication of what works or fails.
-- **Topic 3 kept as Poor Usability.** It is borderline: its reviews are short, and many are generic. Exclusion was
-  considered. It is kept because it is the only topic about clarity, complexity and slowness; excluding it would
-  remove that dimension and make the excluded set even more positive.
+- **Topic 3 kept as Poor Usability.** It is borderline: 51.9% of its reviews have 5 words or fewer, and many are
+  generic. It is kept because it is the only topic about clarity, complexity and slowness; excluding it would remove
+  that dimension and make the excluded set even more positive.
 - **Missing Stations is an App Issue.** The reviews report stations removed from the app or missing from its list,
   often after an update: something that worked and stopped working. A few fare and route complaints are mixed in.
 - **Topics 0, 6 and 29 merged into Unreliable Train Status.** All three are about delays and cancellations shown
@@ -609,28 +820,17 @@ Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion to
   quality.
 - **No category for feature requests.** Requests are scattered across topics and dominate none of them.
 - **Text inspection kept out of the notebook.** The manual review notes contain review texts and stay local
-  (`labeling/`, gitignored). The notebook prints only counts and aggregates.
-
-### Validation (final run)
-
-| Check | Result |
-|---|---|
-| Guard (ids 0-29 in both, sizes match, assignments match row by row) | 5 × PASS |
-| Every id 0-29 exactly once in the label map | PASS (30 ids, 13 labels + EXCLUDE) |
-| Merge list equals the multi-topic groups of the label map | PASS |
-| Post-merge topics | 22; each maps to one label, and each kept label to one post-merge topic |
-| No `author` column in any output | PASS |
-| `review_id` hashed (12 hex) for every row | PASS (6,951 / 6,951) |
-| `reply_text` identical to clean.csv (and thus to raw) | PASS (0 different) |
-| 13 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
-
-**Bias check.** The values are in Key numbers. The notebook computes its conclusion from them: excluded reviews are
-more positive, so the analysis set is more negative than all Italian reviews. This is an
-[exclusion bias](glossary.md#exclusion-bias).
+  (`labeling/`, gitignored). The notebook prints only counts, aggregates and keywords.
+- **Dots for averages, one palette everywhere.** Ratings start from 1, so averages are dots on a 1-5 axis. The
+  Okabe-Ito colours stay distinct for readers with colour vision deficiency and are the same in notebook 03 and in
+  the dashboard.
 
 ### Known limitations
-- The labels, the categories and the exclusion rule are manual judgements.
-- The analysis set is more negative than the full dataset.
+- The labels, the categories and the exclusion rule were decided by one person.
+- The exclusion rule was written after reading the topics, not before.
+- The reliability of the labels has not been measured, for example by a second coder on a sample of reviews.
+- The analysis set is more negative than the full dataset, and the share excluded changes from year to year.
+- The confidence intervals treat ratings as independent and use the mean of an ordinal scale.
 - Poor Usability includes many short, generic complaints.
 
 ---
@@ -703,7 +903,9 @@ Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
    - Critical words ranked by a [normalized frequency ratio](glossary.md#normalized-frequency-ratio),
      `score = (freq_neg / n_neg) / (freq_pos / n_pos + 0.001)`, with a yearly trend for the top 5.
 
-Each category has its own emoji and badge colour: App Issue red, Praise green, Rail Service orange, App Updates blue.
+Each category has its own emoji and badge colour: App Issue red, Praise green, Rail Service violet, App Updates blue.
+Streamlit accepts only named colours there, so these are the closest to the category colours of the 04c charts. The
+star ratings use the same 1-5 scale as notebook 03, and the main line colour is the same blue `#0072B2`.
 
 ### Key Findings at this snapshot
 - **Top app issue:** Unreliable Train Status (1,501 reviews, 1.78★).
@@ -744,12 +946,16 @@ would make a new snapshot. 04a only compares settings and saves nothing, so it c
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
-- Pinned direct dependencies: `requirements-notebooks.txt` for the notebooks, `requirements.txt` for the dashboard.
+- Three requirements files:
+  - `requirements.txt`: the dashboard, read by Streamlit Cloud and by the tests in GitHub Actions;
+  - `requirements-notebooks.txt`: the packages the notebooks use directly, pinned;
+  - `requirements-notebooks.lock.txt`: every package of the environment, with its exact version.
 - Full environment: `requirements-notebooks.lock.txt`, a [lock file](glossary.md#lock-file) from `pip freeze`. It
-  pins all 140 installed packages, including indirect ones such as transformers, numba and pynndescent.
-  - It captures the environment of 2026-11-02 (setuptools, already installed, was added to the file on
-    2026-11-03). In it 04b reproduces the current topic model exactly and the tests pass.
-  - It is not the environment of the earlier frozen model (§8), which was not recorded.
+  pins all 142 installed packages, including indirect ones such as transformers, numba and pynndescent.
+  - It captures the environment of 2026-11-02. setuptools, already installed, was added to the file on
+    2026-11-03, and nbformat with its dependency fastjsonschema, also already installed, on 2026-11-04. No other
+    version changed. In it 04b reproduces the current topic model exactly and the tests pass.
+  - It is not the environment of the earlier model replaced on 2026-11-02 (§8), which was not recorded.
 - [Secret key](glossary.md#secret-key) in `.env` (template: `.env.example`).
 
 **How to run.**
@@ -778,6 +984,10 @@ every review, the 13 labels with their sizes and the six charts (byte-identical)
 and topics files were identical to the previous run, so every `review_id` is unchanged. The charts changed only in
 their titles.
 
+**Rerun of 2026-11-04.** 04b and 04c were rerun in a fresh kernel after new cells were added to both, and 03 after
+its colours changed. 04b gave the same topic for every review, the same sizes and the same keywords. The three
+CSVs of 04c were identical to the previous commit. The six charts of 03 changed only in their colours.
+
 **Deterministic steps.**
 - 01b, given the same raw file and key.
 - 02, for fixed library versions.
@@ -791,7 +1001,7 @@ their titles.
 
 **Why the label map must be rebuilt after retraining in another environment.** The label map refers to the topic
 ids and sizes of the 04b model. A model trained elsewhere can number and size its topics differently, so labels
-would attach to the wrong reviews. The guard in 04c stops with an error in that case.
+would attach to the wrong reviews. The keyword check of the label map in 04c stops with an error in that case.
 
 **What a fresh clone can reproduce.** The BERTopic model, the raw data and the intermediate CSVs are not published,
 so on a fresh clone 04b and 04c cannot run as is. Someone cloning the repository can:
@@ -826,8 +1036,8 @@ They cannot regenerate the published topics and labels exactly without the origi
 published `review_id` comes from the new key. Ids published before the rotation cannot be linked to the new ones.
 
 **Notebook outputs.** The notebooks print only counts, aggregates, keywords and, in 01b, a preview of non-text
-columns. A scan of all saved outputs after the 2026-11-03 rerun found no key, review or reply text, author name or
-local path.
+columns. A scan of all saved outputs after the 2026-11-04 rerun found no key, review or reply text (also as
+tokens), author name or local path.
 
 ---
 

@@ -1,4 +1,4 @@
-# Notebook pipeline dependencies (01 → 04b). Dashboard dependencies: requirements.txt
+# Notebook pipeline dependencies (01 to 04c). Dashboard dependencies: requirements.txt
 # Python 3.13 (see .python-version)
 
 # Core
@@ -24,6 +24,12 @@ umap-learn==0.5.12
 hdbscan==0.8.42
 scikit-learn==1.8.0
 gensim==4.4.0
+
+# 04b - plotly charts shown in the notebook (fig.show needs nbformat)
+nbformat==5.11.1
+
+# 04c - confidence intervals (t distribution)
+scipy==1.18.1
 
 # Tests (dashboard smoke tests in tests/)
 pytest==9.2.0

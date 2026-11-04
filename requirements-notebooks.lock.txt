@@ -1,8 +1,8 @@
 # Full pinned environment of venv_trenord (pip freeze), captured on 2026-11-02 with Python 3.13.0 on Windows.
 # gensim was added the same day without changing any other version.
 # setuptools, installed with the venv but left out of the first freeze, was added on 2026-11-03.
+# nbformat and its dependency fastjsonschema, already installed, were added on 2026-11-04.
 # In this environment 04b_topic_modeling_training reproduces the current topic model exactly.
-# It is NOT the environment in which the earlier frozen model was trained (that one was not recorded).
 # Direct dependencies: requirements-notebooks.txt (notebooks) and requirements.txt (dashboard).
 # Install: pip install -r requirements-notebooks.lock.txt
 
@@ -30,6 +30,7 @@ cycler==0.12.1
 cymem==2.0.16
 debugpy==1.8.22
 executing==2.3.0
+fastjsonschema==2.22.3
 filelock==4.2.6
 fonttools==4.68.0
 fsspec==2026.9.0
@@ -71,6 +72,7 @@ mdurl==0.1.2
 mpmath==1.3.0
 murmurhash==1.0.16
 narwhals==2.28.0
+nbformat==5.11.1
 nest-asyncio==1.6.0
 networkx==3.7
 numba==0.68.1

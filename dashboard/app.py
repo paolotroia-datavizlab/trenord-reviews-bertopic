@@ -37,24 +37,29 @@ STOPWORDS_FILE = Path(__file__).parent / "stopwords_it.txt"
 
 STARS = [1, 2, 3, 4, 5]
 
-# One colour per star rating - red (negative) to green (positive), grey for neutral
+# Colours based on the Okabe-Ito palette, the same as in notebooks 03 and 04c.
+# It stays readable for people with colour vision deficiency.
+# One colour per star rating - vermillion and orange (negative) to green (positive), grey for neutral
 RATING_COLORS = {
-    1: "#d9534f",
-    2: "#e8825a",
-    3: "#aaaaaa",
-    4: "#7bc67e",
-    5: "#4caf50",
+    1: "#D55E00",
+    2: "#E69F00",
+    3: "#999999",
+    4: "#66C5AB",
+    5: "#009E73",
 }
-PRIMARY_COLOR    = "#4a90d9"
+PRIMARY_COLOR    = "#0072B2"
 INCOMPLETE_COLOR = "#aaaaaa"
-SERIES_COLORS    = ["#d9534f", "#e8825a", "#f0c040", "#4a90d9", "#7bc67e"]
+SERIES_COLORS    = ["#D55E00", "#E69F00", "#009E73", "#0072B2", "#CC79A7"]
 
 # Display style (emoji, badge colour) for known categories.
+# Emoji and badges accept only a few named colours, so each category uses the one closest
+# to its colour in the 04c charts: App Issue #D55E00, Praise #009E73, Rail Service #CC79A7,
+# App Updates #0072B2.
 # The categories themselves are always read from the data.
 CATEGORY_STYLES = {
     "App Issue":    ("🔴", "red"),
     "Praise":       ("🟢", "green"),
-    "Rail Service": ("🟠", "orange"),
+    "Rail Service": ("🟣", "violet"),
     "App Updates":  ("🔵", "blue"),
 }
 DEFAULT_CATEGORY_STYLE = ("⚪", "gray")
