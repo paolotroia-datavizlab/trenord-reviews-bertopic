@@ -1,4 +1,4 @@
-# Notebook pipeline dependencies (01 to 07). Dashboard dependencies: requirements.txt
+# Notebook pipeline dependencies (01 to 08). Dashboard dependencies: requirements.txt
 # Python 3.13 (see .python-version)
 
 # Core
@@ -31,6 +31,9 @@ nbformat==5.11.1
 
 # 07 - confidence intervals (t distribution)
 scipy==1.18.1
+
+# 08 - Excel file for the blind coding sample
+openpyxl==3.1.5
 
 # Tests (dashboard smoke tests in tests/)
 pytest==9.2.0

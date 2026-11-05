@@ -53,6 +53,10 @@ flowchart TD
     N07 --> TOP[("top_reviews_per_topic.csv")]
     N07 --> FINAL[("bertopic_model_merged<br/>local only")]
     N07 --> PNG2["three charts in reports/figures"]
+    CLEAN --> N08["08 label validation"]
+    LAB --> N08
+    N08 --> STAB["stability table, no files"]
+    N08 --> SAMPLE[("validation_sample.xlsx, validation_key.csv<br/>labeling/, local only")]
     LAB --> DASH["dashboard/app.py, Streamlit"]
     ANA --> DASH
     TOP --> DASH
@@ -75,6 +79,7 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 07 | yes |
 | `bertopic_model_merged/` | 07 | no |
 | `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png` | 07 | yes |
+| `labeling/validation_sample.xlsx`, `labeling/validation_key.csv` (written only once, §10) | 08 | no (gitignored, contain review texts) |
 
 All CSVs are written with `encoding="utf-8-sig"` and `index=False`.
 
@@ -200,7 +205,7 @@ everything after it works on protected data.
   `load_dotenv()` adds its variables to the environment, where `os.getenv("PSEUDO_KEY")` reads them.
 - **Key check.** The notebook stops before hashing if the key is missing, empty or still `change_me`: ids hashed
   with a known key could be recomputed by anyone from the public store ids.
-- **Rotation.** The key was rotated on 2026-11-02 and the pipeline rerun (§11). Every published `review_id` changed;
+- **Rotation.** The key was rotated on 2026-11-02 and the pipeline rerun (§12). Every published `review_id` changed;
   nothing else did.
 
 ### Method
@@ -567,6 +572,8 @@ The four comparisons above lead to these decisions for 06 (cell 46):
   slightly (0.429 against 0.419) and bring back a pair made by joining reviews ("ottima ottima"). KeyBERTInspired is
   lower on both coherence (0.407 against 0.419) and diversity (0.770 against 0.783).
 
+Notebook 08 has since measured the stability of the labeled themes (§10).
+
 ### Validation
 - Seed 42 with the current settings gives the same topic for every review as the `min_cluster_size=30` run of the
   first table (cell 32), so the check stays inside the notebook. The same run was also compared with
@@ -589,8 +596,8 @@ The four comparisons above lead to these decisions for 06 (cell 46):
 - The seed comparison uses five seeds, and the embedding and keyword comparisons use seed 42 only.
 - The keyword metrics of e5 are missing, because `min_df=5` leaves it no keyword.
 - Seed stability is moderate: the ARI against seed 42 goes from 0.515 to 0.885 and the number of topics from 27 to
-  33. It measures the 30 topics, not the 13 labels; the stability of the labeled themes across seeds will be
-  measured in notebook 08.
+  33. It measures the 30 topics, not the 13 labels. Notebook 08 measures the labels: 93.6% to 94.6% of the
+  reviews keep their label with seeds 0, 1 and 2, and 79.1% with seed 3 (§10).
 - The UMAP and HDBSCAN settings were chosen for the current embedding model, so the embedding comparison favours
   it.
 
@@ -741,8 +748,9 @@ sets MMR again before merging.
 - Some topics are dominated by short, generic reviews (see the exclusion rule in 07).
 - The topic tree measures how similar the keywords are, not how similar the opinions are.
 - The topics depend partly on the UMAP seed: in 05 other seeds give 27 to 33 topics, with an ARI of 0.515 to 0.885
-  against seed 42 (§7). The stability of the 13 labels across seeds has not been measured yet; it is planned for
-  notebook 08.
+  against seed 42 (§7). In 08, 93.6% to 94.6% of the reviews keep their label with seeds 0, 1 and 2, and 79.1%
+  with seed 3, where Subscription Purchase Failures and Login & Account Issues are absorbed by Ticket Purchase
+  Failures (§10).
 - The embedding model was compared with two others using UMAP and HDBSCAN settings chosen for it, which favours
   it (§7).
 
@@ -985,7 +993,158 @@ Both are local only and gitignored.
 
 ---
 
-## 10. Dashboard
+## 10. Notebook 08 - Label validation
+
+08 checks the 13 labels of 07 in two ways. Part 1 trains the model of 06 again with other UMAP seeds and measures
+how many reviews keep their label. Part 2 draws a sample of reviews for [blind coding](glossary.md#blind-coding)
+by hand, to be compared later with the model labels. It changes no label and writes nothing in `data/processed/`.
+
+### Input and output
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`, with `text_clean` as in 06, and
+  `trenord_reviews_labeled.csv` (from 07), for its `topic` and `topic_label` columns. Cell 3 checks that the two
+  files list the same reviews in the same order.
+- Output: the stability table in the notebook, and two files in `labeling/` (gitignored, they contain review
+  texts): `validation_sample.xlsx` and `validation_key.csv`. They are written only if `validation_sample.xlsx`
+  does not exist yet, so a rerun never overwrites the coding.
+
+### Method
+1. Load both files and check that they list the same reviews (cell 3). Prepare the texts as in 06 (cell 4).
+2. Compute the embeddings once with `paraphrase-multilingual-mpnet-base-v2` (cell 5). They do not depend on the
+   UMAP seed.
+3. `train_topic_model(umap_random_state)` trains with the settings of 06 and reduces the outliers as in 06
+   (cell 6). Train it for seeds 42, 0, 1, 2 and 3 (cell 7).
+4. Check that seed 42 gives every review the topic saved in `trenord_reviews_labeled.csv` (cell 8).
+5. Give each topic of the other seeds the current label of most of its reviews, measure the share of reviews that
+   keep their label, and show where the reviews of the lost labels go (cells 10-12).
+6. Write the codebook (cell 15), draw a [stratified sample](glossary.md#stratified-sample) (cell 16), shuffle it
+   (cell 17), write the two files (cell 18) and read them back (cell 19).
+
+### Parameters
+| Parameter | Value |
+|---|---|
+| UMAP seeds | 42, 0, 1, 2, 3 |
+| Model settings | as in 06: UMAP `n_neighbors=15`, `n_components=5`, `min_dist=0.0`, `metric="cosine"`; HDBSCAN `min_cluster_size=30`; `min_df=5`; MMR `diversity=0.3`; outliers reduced with `strategy="embeddings"`, `threshold=0.0` |
+| `SAMPLE_PER_LABEL` | 14 |
+| `SAMPLE_SEED` | 42, for the sample and for its order |
+
+### Results: one model per seed
+| Seed | Topics | Outliers before reduction | Labels that are the majority in at least one topic |
+|---|---|---|---|
+| 42 | 30 | 1,601 | - |
+| 0 | 33 | 2,023 | 14 of 14 |
+| 1 | 27 | 1,264 | 14 of 14 |
+| 2 | 31 | 1,564 | 14 of 14 |
+| 3 | 27 | 984 | 12 of 14 |
+
+Seed 42 gives every review the topic of `trenord_reviews_labeled.csv`: 0 of 6,951 reviews differ (cell 8). No
+topic of the other seeds has a tie between two labels.
+
+### Stability of the labeled themes
+The topics of a new seed have new numbers, so they cannot be matched to the old ones by number. Each new topic
+gets the current label (one of the 13, or EXCLUDE) that most of its reviews have now. A review keeps its label if
+its new topic carries the label it has now. The table gives, for each label, the share of its reviews that keep
+it, and in the last row the share of all reviews (cell 11).
+
+A made-up example: a new topic has 100 reviews, 70 now labeled Ticket Purchase Failures, 20 Subscription Purchase
+Failures and 10 EXCLUDE. It gets Ticket Purchase Failures; the 70 keep their label and the other 30 do not. A
+label that is the majority in no new topic keeps 0%.
+
+| Label | Reviews | Seed 0 | Seed 1 | Seed 2 | Seed 3 |
+|---|---|---|---|---|---|
+| Unreliable Train Status | 1,501 | 98.6% | 97.1% | 95.5% | 93.5% |
+| Ticket Purchase Failures | 1,143 | 93.8% | 97.8% | 98.4% | 99.4% |
+| EXCLUDE | 953 | 96.2% | 81.3% | 86.6% | 82.9% |
+| App Crashes & Freezes | 655 | 91.3% | 92.4% | 88.2% | 83.7% |
+| Subscription Purchase Failures | 641 | 95.6% | 98.3% | 94.4% | 0.0% |
+| Poor Usability | 499 | 86.6% | 97.4% | 98.2% | 96.6% |
+| Ease of Use | 463 | 96.3% | 96.5% | 98.3% | 95.0% |
+| Login & Account Issues | 289 | 94.1% | 95.2% | 91.0% | 0.0% |
+| Easy Purchase & Payment | 277 | 94.2% | 93.1% | 89.9% | 82.3% |
+| Station & Favorites Bugs | 173 | 89.6% | 91.9% | 92.5% | 90.2% |
+| QR Code Failures | 118 | 95.8% | 98.3% | 97.5% | 93.2% |
+| Rail Service Complaints | 87 | 88.5% | 82.8% | 86.2% | 79.3% |
+| Version Comparisons | 81 | 95.1% | 93.8% | 86.4% | 96.3% |
+| Missing Stations | 71 | 88.7% | 97.2% | 91.5% | 81.7% |
+| Overall | 6,951 | 94.6% | 94.1% | 93.6% | 79.1% |
+
+- With seeds 0, 1 and 2, 93.6% to 94.6% of the reviews keep their label, and every label keeps at least 81.3%.
+- With seed 3, 79.1%. Subscription Purchase Failures and Login & Account Issues are the majority in no topic:
+  98.8% of the subscription reviews and 96.9% of the login reviews end up in topics where Ticket Purchase Failures
+  is the majority (cell 12). Seed 3 is also the seed with the lowest ARI against seed 42 in 05 (0.515, §7).
+- The two largest labels are the most stable: Unreliable Train Status keeps 93.5% to 98.6%, Ticket Purchase
+  Failures 93.8% to 99.4%.
+- Among the labels that never disappear, EXCLUDE (81.3% to 96.2%) and Rail Service Complaints (79.3% to 88.5%)
+  move the most.
+
+Most themes come back with every seed. The split between ticket, subscription and login problems depends on the
+seed: in one seed out of four it is gone.
+
+### The blind coding sample
+- 14 reviews from each of the 13 labels and 14 from EXCLUDE, 196 in total, drawn with `random_state=42` (cell 16).
+- The rows are shuffled with the same seed, and `sample_id` (1 to 196) is given after the shuffle, so neither the
+  order nor the id says anything about the label. The longest run of the same label in a row is 2 (cell 17). No
+  review in the sample has an empty text.
+- `validation_sample.xlsx` has two sheets:
+  - `coding`: `sample_id`, `text` (the review as written, not `text_clean`, because a person reads it) and an empty
+    `my_label` column with a dropdown;
+  - `codebook`: one row per label with its category and a one-line definition taken from the comments of the label
+    map in 07, plus EXCLUDE (short generic verdict with no specific content) and "None of these" (the review fits no
+    label). 15 rows.
+- The dropdown reads its values from the label column of the codebook sheet. A list written inside the rule would
+  pass the 255 characters Excel allows.
+- `validation_key.csv` holds `sample_id` and `model_label`: the hidden key, not opened before the coding is done.
+- Cell 19 reads both files back and prints only counts: 196 rows in the coding sheet, 15 in the codebook, 196 in
+  the key, the same texts and ids as the sample, 14 reviews for each of the 14 labels in the key.
+
+#### Why blind
+
+If the model label is visible while coding, it is easy to agree with it. With the key in a separate
+file, my label is given from the text and the codebook only.
+
+#### Why stratified
+
+A simple random sample of 196 would follow the label sizes: mostly Unreliable Train Status and
+Ticket Purchase Failures, and one or two reviews from Missing Stations (71 reviews) or Version Comparisons (81).
+That is too few to say anything about the small labels. With 14 from each, every label can be checked.
+
+#### Why a weighted accuracy will be needed later
+
+In the sample every label has
+the same weight, 14 of 196, while in the data the sizes go from 71 to 1,501 reviews. The plain share of matches in
+the sample therefore over-weights the small labels. To estimate the accuracy over all reviews, the accuracy of each
+label will be weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy)). A made-up example with two labels: label A holds 90% of the
+reviews and is right 9 times out of 10 in the sample, label B holds 10% and is right 5 times out of 10. The plain
+share of matches is 14 of 20, 70%; the weighted accuracy is 0.9 x 90% + 0.1 x 50% = 86%.
+
+### Design decisions
+- The training function is written in 08, not imported from 05: notebooks do not import each other, and 08
+  needs only the seed as a parameter.
+- The ARI of 05 compares the 30 topics. The results are reported on the 13 labels, so 08
+  measures whether the labels come back.
+- Each new topic takes the majority label of its reviews. This needs no reading of the new topics, so it can be repeated for every seed.
+- The two files are written only once. The Excel file will hold my coding, so it is never overwritten. If the data changed, cell
+  19 would show `Same texts as the sample: False`.
+
+### Validation
+- Rerun of 2026-11-05 in a fresh kernel, 406 s.
+- Seed 42 gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews.
+- The two files were created in that run and read back as above. `labeling/` is gitignored, and neither file is
+  tracked or staged.
+- The saved outputs show only counts and shares: a scan found no key, review text (also as tokens), author name or
+  local path.
+
+### Known limitations
+- Four seeds are compared with seed 42. Other seeds may split the topics in other ways.
+- The majority mapping is generous: each new topic takes the label that fits most of its reviews. It shows whether
+  the themes come back, not whether a person reading the new topics would name them the same way.
+- The mapping can only use the current labels, so it cannot find a theme that appears only with a new seed.
+- The sample has not been coded yet. It will be coded by one person, the same who wrote the labels and the
+  codebook, so the comparison checks consistency more than independent agreement.
+- 14 reviews per label give only a rough accuracy for each label, because each review counts for 1 in 14.
+
+---
+
+## 11. Dashboard
 
 **In plain words.** The dashboard is a web page that shows the results interactively. Readers can filter by year,
 star rating and category, look at one theme in detail, and see which words appear most in negative reviews.
@@ -1089,11 +1248,12 @@ The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 
 ---
 
-## 11. Reproducibility
+## 12. Reproducibility
 
-**Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → dashboard. In normal use 01 is **not** rerun, because it
-would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. It reads only
-`trenord_reviews_clean.csv`.
+**Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08, then the dashboard. In normal use 01 is **not** rerun,
+because it would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. It reads
+only `trenord_reviews_clean.csv`. 08 needs the output of 07 and writes only to `labeling/`, which the dashboard
+does not read; its two files are written only once (§10).
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
@@ -1102,10 +1262,11 @@ would make a new snapshot. 05 only compares settings and saves nothing, so it ca
   - `requirements-notebooks.txt`: the packages the notebooks use directly, pinned;
   - `requirements-notebooks.lock.txt`: every package of the environment, with its exact version.
 - Full environment: `requirements-notebooks.lock.txt`, a [lock file](glossary.md#lock-file) from `pip freeze`. It
-  pins all 142 installed packages, including indirect ones such as transformers, numba and pynndescent.
+  pins all 144 installed packages, including indirect ones such as transformers, numba and pynndescent.
   - It captures the environment of 2026-11-02. setuptools, already installed, was added to the file on
-    2026-11-03, and nbformat with its dependency fastjsonschema, also already installed, on 2026-11-04. No other
-    version changed. In it 06 reproduces the current topic model exactly and the tests pass.
+    2026-11-03, and nbformat with its dependency fastjsonschema, also already installed, on 2026-11-04. openpyxl
+    3.1.5 and its dependency et_xmlfile 2.0.0 were installed and added on 2026-11-05, for the Excel file of 08. No
+    other version changed. In it 06 reproduces the current topic model exactly and the tests pass.
   - It is not the environment of the earlier model replaced on 2026-11-02 (§8), which was not recorded.
 - [Secret key](glossary.md#secret-key) in `.env` (template: `.env.example`).
 
@@ -1118,7 +1279,7 @@ pip install -r requirements-notebooks.lock.txt  # notebooks, full pinned environ
 pip install -r requirements.txt                 # dashboard
 cp .env.example .env                            # then replace change_me with the output of:
 python -c "import secrets; print(secrets.token_hex(32))"
-# Notebooks, from the notebooks/ folder: 01 → 02 → 03 → 04 → 05 → 06 → 07
+# Notebooks, from the notebooks/ folder: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08
 streamlit run dashboard/app.py                  # from the repository root
 pytest tests/                                   # dashboard smoke tests, from the repository root
 ```
@@ -1143,7 +1304,7 @@ CSVs of 07 were identical to the previous commit. The six charts of 04 changed o
 - 02, given the same raw file and key.
 - 03, for fixed library versions.
 - 04.
-- 05 and 06, in the locked environment.
+- 05, 06 and 08, in the locked environment.
 - 07, which loads the 06 model.
 
 **Non-deterministic steps.**
@@ -1164,14 +1325,14 @@ They cannot regenerate the published topics and labels exactly without the origi
 
 ---
 
-## 12. Privacy and data handling
+## 13. Privacy and data handling
 
 | Item | Status |
 |---|---|
 | Raw reviews (`data/raw/`) | local only, gitignored |
 | Anon, clean and topics CSVs | local only, gitignored |
 | BERTopic models | local only, gitignored |
-| Manual labeling notes (`labeling/`, contain review texts) | local only, gitignored |
+| Manual labeling notes and the validation sample of 08 (`labeling/`, contain review texts) | local only, gitignored |
 | Secret key (`.env`) | local only, gitignored and never committed; rotated on 2026-11-02; `.env.example` holds a placeholder |
 | Labeled, analysis and top-reviews CSVs | published: review text, rating, date, app version and developer reply; no author, pseudonymised id |
 | Charts | published (aggregates only) |
@@ -1188,12 +1349,14 @@ published `review_id` comes from the new key. Ids published before the rotation 
 
 **Notebook outputs.** The notebooks print only counts, aggregates, keywords and, in 02, a preview of non-text
 columns. A scan of all saved outputs after the 2026-11-04 rerun found no key, review or reply text (also as
-tokens), author name or local path.
+tokens), author name or local path. The same scan of 08, on 2026-11-05, found none either.
 
 ---
 
-## 13. Future work
+## 14. Future work
 
+- **Compare the blind coding with the model labels** (§10), label by label, with a weighted accuracy for all
+  reviews.
 - **Sentiment analysis of the text**, to check the ratings and find the reviews where text and rating disagree.
 - **Aspect-based sentiment analysis**, to capture several issues and opinions within one review instead of one
   topic per review.
@@ -1201,7 +1364,7 @@ tokens), author name or local path.
 
 ---
 
-## 14. Data dictionary
+## 15. Data dictionary
 
 The three published CSVs in `data/processed/`, written by 07 with `encoding="utf-8-sig"` and `index=False`.
 Types are as read by `pandas.read_csv`. "Empty" means an empty cell, read as `NaN`. Columns that hold review or

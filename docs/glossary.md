@@ -19,6 +19,11 @@ A sequence of two adjacent words treated as one term, such as "acquistare biglie
 both are n-grams.
 Here topic keywords may be single words or bigrams.
 
+## Blind coding
+Labeling a sample of items by hand without seeing the label given before, here by the model. The hidden labels
+are kept in a separate key and compared only after the coding, so they cannot influence it.
+Notebook 08 prepares a blind coding sample of 196 reviews.
+
 ## BOM (byte-order mark)
 An invisible marker at the start of a text file that declares its encoding.
 The CSV files are saved as `utf-8-sig`, which adds a BOM so that spreadsheet programs read accented characters correctly.
@@ -182,6 +187,11 @@ Very common words with little meaning on their own, such as articles and preposi
 before counting words.
 The spaCy Italian stopword list is removed in lemmatization, topic keywords and the dashboard word analysis.
 
+## Stratified sample
+A sample drawn separately from each group (stratum), with a set number of items from each, instead of from all
+items at once. It guarantees enough items from the small groups, but its proportions differ from the data.
+Notebook 08 draws 14 reviews from each of the 13 labels and from EXCLUDE.
+
 ## t distribution
 A probability distribution similar to the normal one but with heavier tails, used when the spread of the
 population is estimated from the sample itself. Its shape depends on the degrees of freedom, here the number of
@@ -212,3 +222,8 @@ The representations are recomputed after outlier reduction and after merging.
 Uniform Manifold Approximation and Projection: a method that compresses high-dimensional vectors into a few
 dimensions while keeping similar items close together.
 It reduces the review embeddings to 5 dimensions before clustering.
+
+## Weighted accuracy
+An accuracy in which each group counts with its share of the data, not with its share of the sample. It is
+needed when the sample has the same number of items from groups of very different sizes.
+It will be used to compare the blind coding of notebook 08 with the model labels.

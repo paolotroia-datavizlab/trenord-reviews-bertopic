@@ -11,7 +11,7 @@ and publishes the results in an interactive Streamlit dashboard.
 - **Dashboard:** https://trenord-review-analysis.streamlit.app
 - **Technical documentation:** [docs/architecture.md](docs/architecture.md)
 - **Glossary:** [docs/glossary.md](docs/glossary.md)
-- **Data dictionary:** [columns of the published CSVs](docs/architecture.md#14-data-dictionary)
+- **Data dictionary:** [columns of the published CSVs](docs/architecture.md#15-data-dictionary)
 
 ## Key findings
 
@@ -44,6 +44,7 @@ notebooks/        pipeline, run in this order:
   05_model_selection.ipynb             compare BERTopic settings
   06_topic_model_training.ipynb        train BERTopic
   07_topic_labeling.ipynb              label the topics, export the dashboard files
+  08_label_validation.ipynb            stability of the labels, sample for blind coding
 reports/figures/  charts and the dashboard screenshot:
   six charts from 04                   ratings and developer replies over time
   chart_reviews_per_topic.png          07: reviews per topic
@@ -79,7 +80,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 Never commit `.env`. A different key gives different `review_id` values but identical topics and results. In the
 environment of the lock file, training the topic model in 06 gives exactly the same topics. For the full pipeline,
-see [Reproducibility in docs/architecture.md](docs/architecture.md#11-reproducibility).
+see [Reproducibility in docs/architecture.md](docs/architecture.md#12-reproducibility).
 
 ## Data and privacy
 
@@ -89,7 +90,7 @@ next is not necessarily the same size. The topics depend partly on the random se
 to 33 topics, with an adjusted Rand index of 0.515 to 0.885 against the seed used. The embedding model was
 compared with two others using UMAP and HDBSCAN settings chosen for it, so that comparison favours it.
 Author names are removed, review ids are pseudonymized with a keyed hash, and the raw data is not published.
-Details: [Privacy and data handling](docs/architecture.md#12-privacy-and-data-handling).
+Details: [Privacy and data handling](docs/architecture.md#13-privacy-and-data-handling).
 
 ## License
 
