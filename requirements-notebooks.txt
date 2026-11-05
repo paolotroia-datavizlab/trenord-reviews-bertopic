@@ -1,4 +1,4 @@
-# Notebook pipeline dependencies (01 to 04c). Dashboard dependencies: requirements.txt
+# Notebook pipeline dependencies (01 to 07). Dashboard dependencies: requirements.txt
 # Python 3.13 (see .python-version)
 
 # Core
@@ -11,12 +11,12 @@ ipykernel==7.2.0
 # 01 - scraping
 google-play-scraper==1.2.7
 
-# 02 - language detection and lemmatization
+# 03 - language detection and lemmatization
 lingua-language-detector==2.2.0
 spacy==3.8.14
 it_core_news_lg @ https://github.com/explosion/spacy-models/releases/download/it_core_news_lg-3.8.0/it_core_news_lg-3.8.0-py3-none-any.whl#sha256=b78582d0b2d05fd6509995f68ab7452efed7a27c6fbc5a071e9a9787a58c1e87
 
-# 04a / 04b / 04c - topic modeling
+# 05 / 06 / 07 - topic modeling
 bertopic==0.17.4
 sentence-transformers==5.4.1
 torch==2.11.0
@@ -25,11 +25,11 @@ hdbscan==0.8.42
 scikit-learn==1.8.0
 gensim==4.4.0
 
-# 04b - plotly charts shown in the notebook (fig.show needs nbformat)
+# 06 - plotly charts shown in the notebook (fig.show needs nbformat)
 plotly==6.7.0
 nbformat==5.11.1
 
-# 04c - confidence intervals (t distribution)
+# 07 - confidence intervals (t distribution)
 scipy==1.18.1
 
 # Tests (dashboard smoke tests in tests/)

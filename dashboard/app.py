@@ -37,7 +37,7 @@ STOPWORDS_FILE = Path(__file__).parent / "stopwords_it.txt"
 
 STARS = [1, 2, 3, 4, 5]
 
-# Colours based on the Okabe-Ito palette, the same as in notebooks 03 and 04c.
+# Colours based on the Okabe-Ito palette, the same as in notebooks 04 and 07.
 # It stays readable for people with colour vision deficiency.
 # One colour per star rating - vermillion and orange (negative) to green (positive), grey for neutral
 RATING_COLORS = {
@@ -53,7 +53,7 @@ SERIES_COLORS    = ["#D55E00", "#E69F00", "#009E73", "#0072B2", "#CC79A7"]
 
 # Display style (emoji, badge colour) for known categories.
 # Emoji and badges accept only a few named colours, so each category uses the one closest
-# to its colour in the 04c charts: App Issue #D55E00, Praise #009E73, Rail Service #CC79A7,
+# to its colour in the 07 charts: App Issue #D55E00, Praise #009E73, Rail Service #CC79A7,
 # App Updates #0072B2.
 # The categories themselves are always read from the data.
 CATEGORY_STYLES = {
@@ -93,7 +93,7 @@ def load_reviews(file_name):
 
 @st.cache_data
 def load_stopwords():
-    # Static export of the spaCy Italian stopword list, written by notebook 02,
+    # Static export of the spaCy Italian stopword list, written by notebook 03,
     # so the app does not need spaCy. Lines starting with "#" are comments.
     stopwords = set()
     for line in STOPWORDS_FILE.read_text(encoding="utf-8").splitlines():
@@ -102,7 +102,7 @@ def load_stopwords():
             stopwords.add(word)
     return stopwords
 
-# Informative reviews only - EXCLUDE topics already removed by notebook 04c
+# Informative reviews only - EXCLUDE topics already removed by notebook 07
 df_analysis    = load_reviews("trenord_reviews_analysis.csv")
 # Top 5 upvoted reviews per topic - used in Deep Dive tab
 df_top_reviews = load_reviews("top_reviews_per_topic.csv")

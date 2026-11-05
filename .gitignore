@@ -1,7 +1,7 @@
 venv_trenord/
 data/raw/*.csv
-data/processed/bertopic_model/
-data/processed/bertopic_model_final/
+data/processed/bertopic_model_trained/
+data/processed/bertopic_model_merged/
 data/processed/trenord_reviews_topics.csv
 data/processed/trenord_reviews_clean.csv
 __pycache__/

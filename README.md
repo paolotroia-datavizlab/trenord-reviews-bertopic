@@ -38,17 +38,17 @@ data/processed/   published CSVs read by the dashboard
 docs/             technical documentation and glossary
 notebooks/        pipeline, run in this order:
   01_scraping.ipynb                    download the Play Store reviews
-  01b_anonymization.ipynb              pseudonymize ids, drop author names
-  02_cleaning.ipynb                    language detection, text cleaning, lemmas
-  03_analysis.ipynb                    ratings and developer replies over time
-  04a_model_selection.ipynb            compare BERTopic settings
-  04b_topic_modeling_training.ipynb    train BERTopic
-  04c_topic_modeling_analysis.ipynb    label the topics, export the dashboard files
+  02_anonymization.ipynb               pseudonymize ids, drop author names
+  03_cleaning.ipynb                    language detection, text cleaning, lemmas
+  04_exploratory_analysis.ipynb        ratings and developer replies over time
+  05_model_selection.ipynb             compare BERTopic settings
+  06_topic_model_training.ipynb        train BERTopic
+  07_topic_labeling.ipynb              label the topics, export the dashboard files
 reports/figures/  charts and the dashboard screenshot:
-  six charts from 03                   ratings and developer replies over time
-  chart_reviews_per_topic.png          04c: reviews per topic
-  chart_avg_rating_per_topic.png       04c: average rating per topic, with 95% confidence intervals
-  chart_keywords_per_topic.png         04c: top keywords of each topic
+  six charts from 04                   ratings and developer replies over time
+  chart_reviews_per_topic.png          07: reviews per topic
+  chart_avg_rating_per_topic.png       07: average rating per topic, with 95% confidence intervals
+  chart_keywords_per_topic.png         07: top keywords of each topic
   dashboard_overview.png               dashboard screenshot
 tests/            dashboard smoke tests (Streamlit AppTest)
 ```
@@ -78,12 +78,14 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 Never commit `.env`. A different key gives different `review_id` values but identical topics and results. In the
-environment of the lock file, training the topic model in 04b gives exactly the same topics. For the full pipeline,
+environment of the lock file, training the topic model in 06 gives exactly the same topics. For the full pipeline,
 see [Reproducibility in docs/architecture.md](docs/architecture.md#11-reproducibility).
 
 ## Data and privacy
 
 Reviews come from an unofficial scraper and cover only part of the store's reviews (about 43% of its ratings).
+Google Play is the only source. Star ratings are ordinal: they are in order, but the step from one star to the
+next is not necessarily the same size.
 Author names are removed, review ids are pseudonymized with a keyed hash, and the raw data is not published.
 Details: [Privacy and data handling](docs/architecture.md#12-privacy-and-data-handling).
 
