@@ -85,7 +85,9 @@ see [Reproducibility in docs/architecture.md](docs/architecture.md#11-reproducib
 
 Reviews come from an unofficial scraper and cover only part of the store's reviews (about 43% of its ratings).
 Google Play is the only source. Star ratings are ordinal: they are in order, but the step from one star to the
-next is not necessarily the same size.
+next is not necessarily the same size. The topics depend partly on the random seed of UMAP: other seeds give 27
+to 33 topics, with an adjusted Rand index of 0.515 to 0.885 against the seed used. The embedding model was
+compared with two others using UMAP and HDBSCAN settings chosen for it, so that comparison favours it.
 Author names are removed, review ids are pseudonymized with a keyed hash, and the raw data is not published.
 Details: [Privacy and data handling](docs/architecture.md#12-privacy-and-data-handling).
 
@@ -98,5 +100,5 @@ with their authors and the platform.
 
 Paolo Troia
 
-- LinkedIn: [LINKEDIN_URL]
-- Blog: [BLOG_URL]
+- LinkedIn: https://www.linkedin.com/in/paolotroia/
+- Blog: https://www.paolotroia.com

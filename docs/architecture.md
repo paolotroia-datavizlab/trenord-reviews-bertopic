@@ -45,7 +45,6 @@ flowchart TD
     N05 --> TABLES["metric tables, no files"]
     CLEAN --> N06["06 training"]
     N06 --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
-    TOPICS -.->|"seed 42 check"| N05
     N06 --> MODEL[("bertopic_model_trained<br/>local only")]
     TOPICS --> N07["07 labeling and export"]
     MODEL --> N07
@@ -374,13 +373,12 @@ second HDBSCAN setting, the random seed of UMAP, the embedding model and the way
 model and no file.
 
 ### Input and output
-- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`. `trenord_reviews_topics.csv` (from 06) is read
-  only by cell 32, to check that seed 42 reproduces the topics of 06, so on a fresh clone that cell needs 06 first.
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`. The notebook reads no other file.
 - Output: tables of metrics in the notebook only.
 
 ### Method
-05 trains the same pipeline that 06 later uses, with the values chosen here. Only the seed 42 check reads a file
-produced by 06.
+05 trains the same pipeline that 06 later uses, with the values chosen here. It does not read anything produced
+by 06.
 
 1. Load the Italian reviews with the same filter, order and empty-text handling that 06 uses (cell 3).
 2. Compute the sentence embeddings once, time the encoding and reuse the embeddings in every run that uses the
@@ -412,11 +410,12 @@ produced by 06.
     topic (cell 20) and show the top 5 keywords of five topics side by side (cell 23). The five topics were chosen
     so that no keyword shown is a personal name or a code.
 11. Compare `min_samples` 5, 10, 15 and 30 with `min_cluster_size=30` and `min_df=5` (cells 25-29).
-12. Compare UMAP seeds 42, 0, 1, 2 and 3 with the current settings, check seed 42 against
-    `trenord_reviews_topics.csv` and compute the adjusted Rand index against seed 42 (cells 30-34).
+12. Compare UMAP seeds 42, 0, 1, 2 and 3 with the current settings, check that seed 42 gives the same topics as the
+    `min_cluster_size=30` run of the first table and compute the adjusted Rand index against seed 42 (cells 30-34).
 13. Compare three embedding models with the current settings (cells 35-39).
 14. Compare four keyword settings on the current assignments, check that no review changes topic, and show the top
     5 keywords of the same five topics (cells 40-45).
+15. Write the choices made from the four comparisons (cell 46).
 
 ### Results: `min_cluster_size` (`min_df=5`)
 
@@ -487,7 +486,8 @@ with 5 and lowest with 15.
 
 The current settings trained with five UMAP [seeds](glossary.md#random-seed) on the same embeddings (cells 30-34).
 The [adjusted Rand index](glossary.md#adjusted-rand-index-ari) compares the final assignments of each seed with those
-of seed 42. Seed 42 gives the same topic for every review as `trenord_reviews_topics.csv` (cell 32).
+of seed 42. Seed 42 gives the same topic for every review as the `min_cluster_size=30` run of the first table,
+which has the same settings (cell 32).
 
 | UMAP seed | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | ARI vs seed 42 |
 |---:|---:|---:|---:|---:|---:|---:|
@@ -509,17 +509,18 @@ MMR, which also uses the embedding model to compare keywords, passes the words w
 
 | Embedding model | Size | Encoding time | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | Words not found | Empty slots | ARI vs current |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `paraphrase-multilingual-mpnet-base-v2` (current) | 768 | 177 s | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 0 | 0 | 1.000 |
-| `paraphrase-multilingual-MiniLM-L12-v2` | 384 | 55 s | 30 | 13.2% | 24.3% | 0.407 | 0.695 | 0 | 2 | 0.431 |
-| `intfloat/multilingual-e5-base` | 768 | 205 s | 7 | 0.0% | 95.4% | - | - | - | - | 0.016 |
+| `paraphrase-multilingual-mpnet-base-v2` (current) | 768 | 272 s | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 0 | 0 | 1.000 |
+| `paraphrase-multilingual-MiniLM-L12-v2` | 384 | 59 s | 30 | 13.2% | 24.3% | 0.407 | 0.695 | 0 | 2 | 0.431 |
+| `intfloat/multilingual-e5-base` | 768 | 233 s | 7 | 0.0% | 95.4% | - | - | - | - | 0.016 |
 
 - e5 gives 7 topics and no outliers. With 7 topics no word appears in at least 5 of them, so `min_df=5` leaves no
   keyword and BERTopic stops with "After pruning, no terms remain". The cell trains it again with `min_df=1`, which
   does not move any review; its keyword columns are left empty because they would not be comparable.
 - With no outliers, `reduce_outliers` would stop with an error, so `train_topic_model` reduces outliers only when
   there are some. Every other run has outliers, so this does not change them.
-- The encoding times are from the run of 2026-11-05 on the project computer. Over three runs that day the encoding
-  of the current model took 238 s, 180 s and 177 s.
+- The encoding times are from the last run of 2026-11-05 on the project computer. Over four runs that day the
+  encoding of the current model took 238 s, 180 s, 177 s and 272 s. During the last run the test suite was running
+  on the same computer for part of the time.
 
 ### Results: keyword settings (current assignments)
 
@@ -548,13 +549,36 @@ and 23), a pair made by joining the reviews of a topic, and "pessima pessimo" (t
 appears inside a review only once "app" is removed. The coherence dictionary of cell 5 is built with the spaCy
 stopwords only, so it contains neither.
 
+### Choice: min_samples, seed, embedding model and keywords
+
+The four comparisons above lead to these decisions for 06 (cell 46):
+- `min_samples` stays at 30, the value 06 gets without setting it. The coherence differences between 5, 10, 15 and
+  30 are small (0.419 to 0.438), and 30 gives the highest diversity (0.783), with fewer topics that share fewer
+  keywords.
+- Seed stability is moderate. The ARI against seed 42 goes from 0.515 to 0.885, and the number of topics from 27 to
+  33. Seed 42 is not an unusually good seed: its coherence (0.419) is within the range of the other seeds (0.415 to
+  0.434). The ARI measures the 30 topics, not the 13 labels given in 07. Whether the labeled themes stay stable
+  across seeds will be measured in notebook 08.
+- The embedding model stays `paraphrase-multilingual-mpnet-base-v2`. MiniLM has lower coherence (0.407 against
+  0.419) and lower diversity (0.695 against 0.783), and `multilingual-e5-base` collapses into 7 topics with 95.4% of
+  the reviews in one. The UMAP and HDBSCAN settings were chosen for the current model, so this comparison favours
+  it. This is a limit of the comparison.
+- The keywords stay MMR with diversity 0.3, without extra stopwords. The extra stopwords raise coherence only
+  slightly (0.429 against 0.419) and bring back a pair made by joining reviews ("ottima ottima"). KeyBERTInspired is
+  lower on both coherence (0.407 against 0.419) and diversity (0.770 against 0.783).
+
 ### Validation
-- Seed 42 with the current settings gives the same topic for every review as `trenord_reviews_topics.csv`, the
-  output of 06 (cell 32). Before 2026-11-05 this check was made once outside the notebook (2026-11-02).
+- Seed 42 with the current settings gives the same topic for every review as the `min_cluster_size=30` run of the
+  first table (cell 32), so the check stays inside the notebook. The same run was also compared with
+  `trenord_reviews_topics.csv`, the output of 06, and gave the same topic for every review: once outside the
+  notebook (2026-11-02) and once in a cell of 05 (2026-11-05) that was then removed, so that 05 reads only
+  `trenord_reviews_clean.csv`.
 - `min_samples=30` gives the same topic for every review as the run without `min_samples` (cell 27), and the four
   keyword settings give the same topics as the current model (cell 42).
 - Rerun of 2026-11-05 in a fresh kernel, 1,087 s: the tables of cells 1-24 are identical to the previous run. Cell 4
   now also prints the encoding time.
+- Rerun of 2026-11-05 after the seed 42 check was moved inside the notebook, 1,442 s: every table is identical
+  to the previous run. Only the encoding times changed.
 - The notebook prints only counts, metrics, keywords and the tokens of one made-up sentence, no review texts.
 
 ### Known limitations
@@ -564,6 +588,11 @@ stopwords only, so it contains neither.
   `min_samples`, were not compared.
 - The seed comparison uses five seeds, and the embedding and keyword comparisons use seed 42 only.
 - The keyword metrics of e5 are missing, because `min_df=5` leaves it no keyword.
+- Seed stability is moderate: the ARI against seed 42 goes from 0.515 to 0.885 and the number of topics from 27 to
+  33. It measures the 30 topics, not the 13 labels; the stability of the labeled themes across seeds will be
+  measured in notebook 08.
+- The UMAP and HDBSCAN settings were chosen for the current embedding model, so the embedding comparison favours
+  it.
 
 ---
 
@@ -698,8 +727,8 @@ sets MMR again before merging.
 - 30 topics, with sizes from 52 to 1,214 reviews; 1,601 outliers before reduction, 0 after.
 - The check before saving passes.
 - **Retraining is reproducible in the locked environment.** Consecutive trainings on 2026-11-02 gave the same topic
-  for every review, the same sizes and the same keyword weights. In 05, seed 42 with precomputed embeddings gives
-  the same topic for every review as this model; the check is cell 32 of 05 (§7).
+  for every review, the same sizes and the same keyword weights. In 05, seed 42 with precomputed embeddings gave
+  the same topic for every review as this model, checked on 2026-11-02 and on 2026-11-05 (§7).
 - **Rerun of 2026-11-04** in a fresh kernel, after the cells of steps 7-9 were added: same topic for every review,
   same 30 topics with the same sizes, same keywords. `trenord_reviews_topics.csv` and the model files are
   byte-identical to the previous run, except for the order in which the 624 stopwords are listed in
@@ -711,6 +740,11 @@ sets MMR again before merging.
   topics differently, which the keyword check of the label map in 07 catches.
 - Some topics are dominated by short, generic reviews (see the exclusion rule in 07).
 - The topic tree measures how similar the keywords are, not how similar the opinions are.
+- The topics depend partly on the UMAP seed: in 05 other seeds give 27 to 33 topics, with an ARI of 0.515 to 0.885
+  against seed 42 (§7). The stability of the 13 labels across seeds has not been measured yet; it is planned for
+  notebook 08.
+- The embedding model was compared with two others using UMAP and HDBSCAN settings chosen for it, which favours
+  it (§7).
 
 ---
 
@@ -1058,8 +1092,8 @@ The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 ## 11. Reproducibility
 
 **Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → dashboard. In normal use 01 is **not** rerun, because it
-would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. Its seed 42 check
-reads `trenord_reviews_topics.csv`, so on a fresh clone that cell needs 06 to have run first.
+would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. It reads only
+`trenord_reviews_clean.csv`.
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
