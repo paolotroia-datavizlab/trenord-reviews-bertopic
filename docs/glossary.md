@@ -2,6 +2,13 @@
 
 Technical terms used in [architecture.md](architecture.md), in alphabetical order.
 
+## Adjusted Rand index (ARI)
+A score that compares two ways of grouping the same items. It looks at every pair of items and checks whether both
+groupings put the two in the same group or in different groups, then corrects for the agreement that random groups
+would reach by chance. 1 means the same grouping, even with different group numbers; about 0 means no more agreement
+than chance; it can be negative.
+Notebook 05 uses it to compare the topics of different UMAP seeds and embedding models with the current model.
+
 ## BERTopic
 A topic modeling library that groups documents by meaning rather than by shared words. It chains an embedding
 model, dimensionality reduction (UMAP), clustering (HDBSCAN) and keyword extraction (c-TF-IDF).
@@ -79,6 +86,12 @@ It replaces the original review ids (HMAC-SHA256, truncated to 12 hexadecimal ch
 Two keywords written next to each topic in the 07 label map, chosen by hand among its top 10 keywords. Notebook 07
 checks that both are still among the top 10 keywords of that topic. If one is missing, the model has changed since
 the labels were written and the notebook stops.
+
+## KeyBERTInspired
+A BERTopic representation model that chooses the keywords of a topic by meaning. It takes the 100 words with the
+highest [c-TF-IDF](#c-tf-idf) weight and keeps the 10 whose embedding is closest to the average embedding of 5
+representative reviews of the topic.
+Notebook 05 compares it with [MMR](#mmr-maximal-marginal-relevance); it changes only the keywords.
 
 ## Language detection confidence
 The probability, between 0 and 1, that a language detector assigns to its best guess for a text.

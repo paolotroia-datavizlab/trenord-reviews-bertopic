@@ -45,6 +45,7 @@ flowchart TD
     N05 --> TABLES["metric tables, no files"]
     CLEAN --> N06["06 training"]
     N06 --> TOPICS[("trenord_reviews_topics.csv<br/>local only")]
+    TOPICS -.->|"seed 42 check"| N05
     N06 --> MODEL[("bertopic_model_trained<br/>local only")]
     TOPICS --> N07["07 labeling and export"]
     MODEL --> N07
@@ -276,11 +277,14 @@ count as the same word.
    - any other language needs `CONFIDENCE_THRESHOLD = 0.5`, otherwise the review is labeled `unknown`.
 4. Clean the text into `text_clean`: lowercase, remove URLs (`http\S+|www\.\S+`), replace characters outside
    `[a-zàèéìíòóùú\s]` with spaces, collapse whitespace. Count words on the original text (cell 5).
-5. [Lemmatize](glossary.md#lemmatization) with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
-   is alphabetic, is not one of the [stopwords](glossary.md#stopwords) and has a lemma longer than 2 characters (cell 6).
-6. Export spaCy's Italian `STOP_WORDS` to `dashboard/stopwords_it.txt`: a header comment, then one word per line,
-   sorted, UTF-8 (cell 7).
-7. Save (cell 8).
+5. Check duplicates on the Italian reviews: rows, distinct `review_id`, distinct `text_clean`, reviews that share
+   their `text_clean` with another review and the number of such groups, and the median length in words of the
+   shared texts and of all Italian reviews. Counts only (cell 6). A markdown cell explains the result (cell 7).
+6. [Lemmatize](glossary.md#lemmatization) with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
+   is alphabetic, is not one of the [stopwords](glossary.md#stopwords) and has a lemma longer than 2 characters (cell 8).
+7. Export spaCy's Italian `STOP_WORDS` to `dashboard/stopwords_it.txt`: a header comment, then one word per line,
+   sorted, UTF-8 (cell 9).
+8. Save (cell 10).
 
 ### Parameters
 
@@ -301,6 +305,10 @@ count as the same word.
 - 10 reviews are empty after cleaning, none of them Italian.
 - 135 reviews are empty after lemmatization.
 - The original text has 19.9 words per review on average.
+- Duplicate check on the 6,951 Italian reviews: 6,951 distinct `review_id`, so no review was collected twice, and
+  6,341 distinct `text_clean`. 743 reviews share their cleaned text with at least one other review, in 133 groups.
+  Their median length is 2 words, against 14 for all Italian reviews. They are kept, because each one is a separate
+  review with its own rating and date.
 
 ### Known limitations
 - The 378 non-Italian or undetermined reviews are not analysed further.
@@ -361,25 +369,31 @@ The charts are regenerated from the data at every run; no number in them is hard
 
 **In plain words.** Before training the final model, this notebook tries several settings and measures how good
 the resulting topics look. It checks two choices: how big a group of reviews must be to count as a topic, and how
-many topics a keyword must appear in to be kept. It saves no model and no file.
+many topics a keyword must appear in to be kept. Then, with those settings fixed, it looks at four more things: a
+second HDBSCAN setting, the random seed of UMAP, the embedding model and the way keywords are chosen. It saves no
+model and no file.
 
 ### Input and output
-- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`. The notebook reads no other file.
+- Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`. `trenord_reviews_topics.csv` (from 06) is read
+  only by cell 32, to check that seed 42 reproduces the topics of 06, so on a fresh clone that cell needs 06 first.
 - Output: tables of metrics in the notebook only.
 
 ### Method
-05 trains the same pipeline that 06 later uses, with the values chosen here. It does not read anything produced
-by 06.
+05 trains the same pipeline that 06 later uses, with the values chosen here. Only the seed 42 check reads a file
+produced by 06.
 
 1. Load the Italian reviews with the same filter, order and empty-text handling that 06 uses (cell 3).
-2. Compute the sentence embeddings once and reuse them in every run, since they do not depend on the settings
-   compared (cell 4).
+2. Compute the sentence embeddings once, time the encoding and reuse the embeddings in every run that uses the
+   current embedding model (cell 4).
 3. Split every review with the same analyzer that produces the keywords (Italian stopwords removed, single words and
    bigrams) and build a gensim `Dictionary` for coherence. The cell prints the tokens of a made-up sentence as an
    example (cell 5).
-4. Define `train_topic_model(min_cluster_size, min_df)`, which trains the pipeline (UMAP, HDBSCAN, CountVectorizer,
-   MMR, outlier reduction, `update_topics`) with fresh model objects and returns the model and the topics before
-   and after outlier reduction (cell 6).
+4. Define `train_topic_model(min_cluster_size, min_df, ...)`, which trains the pipeline (UMAP, HDBSCAN,
+   CountVectorizer, MMR, outlier reduction, `update_topics`) with fresh model objects and returns the model and the
+   topics before and after outlier reduction (cell 6). Optional parameters (`run_embeddings`, `run_embedding_model`,
+   `umap_random_state`, `min_samples`, `extra_stopwords`, `representation_model`) are used only by the last four
+   comparisons; at their default values the function trains exactly the setup of 06. Outliers are reduced only when
+   there are some.
 5. Draw the reviews reduced to 2 dimensions with UMAP for `n_neighbors` 5, 15 and 50, as an illustration of that
    setting (cell 7).
 6. Train one trial model with `min_cluster_size=30` and `min_df=5`, and print its topic 0 keywords and outlier
@@ -397,6 +411,12 @@ by 06.
 10. Compare `min_df` 1, 2 and 5 with `min_cluster_size=30` (cells 19 and 21), check that every review keeps the same
     topic (cell 20) and show the top 5 keywords of five topics side by side (cell 23). The five topics were chosen
     so that no keyword shown is a personal name or a code.
+11. Compare `min_samples` 5, 10, 15 and 30 with `min_cluster_size=30` and `min_df=5` (cells 25-29).
+12. Compare UMAP seeds 42, 0, 1, 2 and 3 with the current settings, check seed 42 against
+    `trenord_reviews_topics.csv` and compute the adjusted Rand index against seed 42 (cells 30-34).
+13. Compare three embedding models with the current settings (cells 35-39).
+14. Compare four keyword settings on the current assignments, check that no review changes topic, and show the top
+    5 keywords of the same five topics (cells 40-45).
 
 ### Results: `min_cluster_size` (`min_df=5`)
 
@@ -447,16 +467,103 @@ from these pairs and from rare variants, which count as different strings.
   - With few topics, as with 40 and 50, the same threshold is too strict: a word must then appear in 5 of only 8 or 6
     topics, which leaves empty keyword slots. If the number of topics is reduced a lot, `min_df` should go down too.
 
+### Results: `min_samples` (`min_cluster_size=30`, `min_df=5`)
+
+06 does not set `min_samples`, so HDBSCAN uses `min_cluster_size` and the effective value is 30. In the
+`min_cluster_size` table above, `min_samples` therefore changed together with `min_cluster_size`. Here only
+`min_samples` changes (cells 25-29). `min_samples=30` gives the same topic for every review as the run without it.
+
+| `min_samples` | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | Words not found | Empty slots |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 5 | 54 | 32.6% | 8.1% | 0.436 | 0.681 | 0 | 0 |
+| 10 | 45 | 27.4% | 13.8% | 0.430 | 0.696 | 0 | 0 |
+| 15 | 38 | 17.7% | 18.6% | 0.438 | 0.721 | 0 | 0 |
+| 30 | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 0 | 0 |
+
+The number of topics falls as `min_samples` grows. The outlier share does not move in one direction: it is highest
+with 5 and lowest with 15.
+
+### Results: UMAP seed (current settings)
+
+The current settings trained with five UMAP [seeds](glossary.md#random-seed) on the same embeddings (cells 30-34).
+The [adjusted Rand index](glossary.md#adjusted-rand-index-ari) compares the final assignments of each seed with those
+of seed 42. Seed 42 gives the same topic for every review as `trenord_reviews_topics.csv` (cell 32).
+
+| UMAP seed | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | ARI vs seed 42 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 42 | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 1.000 |
+| 0 | 33 | 29.1% | 10.1% | 0.434 | 0.767 | 0.667 |
+| 1 | 27 | 18.2% | 19.3% | 0.415 | 0.756 | 0.885 |
+| 2 | 31 | 22.5% | 17.1% | 0.418 | 0.735 | 0.793 |
+| 3 | 27 | 14.2% | 32.6% | 0.426 | 0.726 | 0.515 |
+
+With the seed as the only change, the number of topics goes from 27 to 33, the largest topic from 10.1% to 32.6%,
+and the ARI against seed 42 from 0.515 to 0.885.
+
+### Results: embedding models (`min_cluster_size=30`, `min_df=5`, seed 42)
+
+Three multilingual models, with the embeddings computed once per model and kept only in memory (cells 35-39). The
+two paraphrase models take the text as it is. The `intfloat/multilingual-e5-base` model card asks for the prefix
+`"query: "` on every text for tasks such as clustering and normalizes the embeddings in its example, so both are done.
+MMR, which also uses the embedding model to compare keywords, passes the words without prefix.
+
+| Embedding model | Size | Encoding time | Topics | Outliers before reduction | Largest topic | Coherence c_v | Diversity | Words not found | Empty slots | ARI vs current |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `paraphrase-multilingual-mpnet-base-v2` (current) | 768 | 177 s | 30 | 23.0% | 17.5% | 0.419 | 0.783 | 0 | 0 | 1.000 |
+| `paraphrase-multilingual-MiniLM-L12-v2` | 384 | 55 s | 30 | 13.2% | 24.3% | 0.407 | 0.695 | 0 | 2 | 0.431 |
+| `intfloat/multilingual-e5-base` | 768 | 205 s | 7 | 0.0% | 95.4% | - | - | - | - | 0.016 |
+
+- e5 gives 7 topics and no outliers. With 7 topics no word appears in at least 5 of them, so `min_df=5` leaves no
+  keyword and BERTopic stops with "After pruning, no terms remain". The cell trains it again with `min_df=1`, which
+  does not move any review; its keyword columns are left empty because they would not be comparable.
+- With no outliers, `reduce_outliers` would stop with an error, so `train_topic_model` reduces outliers only when
+  there are some. Every other run has outliers, so this does not change them.
+- The encoding times are from the run of 2026-11-05 on the project computer. Over three runs that day the encoding
+  of the current model took 238 s, 180 s and 177 s.
+
+### Results: keyword settings (current assignments)
+
+Four keyword settings on the current model (cells 40-45). All four give the same topic for every review as the
+current model (cell 42). The extra stopwords are "app" and "applicazione".
+[KeyBERTInspired](glossary.md#keybertinspired) keeps the c-TF-IDF candidates closest to a few representative reviews
+of the topic, while [MMR](glossary.md#mmr-maximal-marginal-relevance) balances relevance and variety.
+
+| Keyword setting | Coherence c_v | Diversity | Words not found | Empty slots |
+|---|---:|---:|---:|---:|
+| MMR 0.3 (current) | 0.419 | 0.783 | 0 | 0 |
+| MMR 0.3 + extra stopwords | 0.429 | 0.757 | 4 | 0 |
+| KeyBERTInspired | 0.407 | 0.770 | 0 | 0 |
+| KeyBERTInspired + extra stopwords | 0.389 | 0.723 | 4 | 0 |
+
+| topic | MMR 0.3 | MMR 0.3 + extra stopwords | KeyBERTInspired | KeyBERTInspired + extra stopwords |
+|---:|---|---|---|---|
+| 5 | login, account, accesso, errore, mail | login, account, accesso, errore, mail | login, registrarmi, account, accedere, riesco accedere | login, registrarmi, account, accedere, riesco accedere |
+| 9 | ottima applicazione, applicazione, utilissima, applicazione utile, efficace | funzionale, utilissima, efficace, ottimo, consigliata | davvero utile, utile, utilissima, funziona utile, ottima applicazione | davvero utile, utile, utilissima, funziona utile, consigliata |
+| 10 | ottima, perfetta, perfetto, fantastica, bellissima | ottima ottima, ottima, perfetto, fantastica, bellissima | ottima, ottimo, fantastica, bellissima, bravi | ottima, ottimo, ottima ottima, fantastica, bellissima |
+| 14 | ottimo, ottimo servizio, buono, complimenti, servizio | ottimo, ottimo servizio, buono, complimenti, servizio | ottimo, ottima, buono, buona, buon | ottimo, ottima, buono, buona, buon |
+| 26 | funziona, accedere, assistenza, accesso, impossibile utilizzare | funziona, accedere, assistenza, accesso, impossibile utilizzare | impossibile utilizzare, inutile, neanche, impossibile, inesistente | impossibile utilizzare, inutile, neanche, impossibile, inesistente |
+
+The 4 words not found with the extra stopwords were checked outside the notebook, for MMR: "ottima ottima" (topics 10
+and 23), a pair made by joining the reviews of a topic, and "pessima pessimo" (topics 19 and 25), a pair that
+appears inside a review only once "app" is removed. The coherence dictionary of cell 5 is built with the spaCy
+stopwords only, so it contains neither.
+
 ### Validation
-- One-time validation (2026-11-02): the run with `min_cluster_size=30` was compared once with the 06 model
-  (`topics.csv`) and gave the same number of topics, the same size per topic and the same topic for every review.
-  The check is not part of the notebook, so 05 depends only on `trenord_reviews_clean.csv`.
+- Seed 42 with the current settings gives the same topic for every review as `trenord_reviews_topics.csv`, the
+  output of 06 (cell 32). Before 2026-11-05 this check was made once outside the notebook (2026-11-02).
+- `min_samples=30` gives the same topic for every review as the run without `min_samples` (cell 27), and the four
+  keyword settings give the same topics as the current model (cell 42).
+- Rerun of 2026-11-05 in a fresh kernel, 1,087 s: the tables of cells 1-24 are identical to the previous run. Cell 4
+  now also prints the encoding time.
 - The notebook prints only counts, metrics, keywords and the tokens of one made-up sentence, no review texts.
 
 ### Known limitations
 - Coherence c_v is a proxy. It also rewards near-synonyms and generic words, so the metrics do not replace reading
   the topics. The labels in 07 come from reading the reviews.
-- Only two parameters were compared; the UMAP settings and the embedding model were not.
+- UMAP `n_neighbors`, `n_components` and `min_dist`, and HDBSCAN settings other than `min_cluster_size` and
+  `min_samples`, were not compared.
+- The seed comparison uses five seeds, and the embedding and keyword comparisons use seed 42 only.
+- The keyword metrics of e5 are missing, because `min_df=5` leaves it no keyword.
 
 ---
 
@@ -550,17 +657,17 @@ sets MMR again before merging.
 
 | Parameter | Value | Why |
 |---|---|---|
-| Embedding model | `paraphrase-multilingual-mpnet-base-v2` | "Best lightweight multilingual model that runs on CPU and handles Italian well" (notebook comment); not compared with alternatives. |
+| Embedding model | `paraphrase-multilingual-mpnet-base-v2` | "Best lightweight multilingual model that runs on CPU and handles Italian well" (notebook comment). Compared in 05 with `paraphrase-multilingual-MiniLM-L12-v2` and `intfloat/multilingual-e5-base` (§7). |
 | UMAP `n_neighbors` | 15 | BERTopic's default UMAP setting; not tuned. |
 | UMAP `n_components` | 5 | BERTopic's default; reduces dimensions before clustering. Not tuned. |
 | UMAP `min_dist` | 0.0 | BERTopic's default; packs similar points tightly, which helps clustering. Not tuned. |
 | UMAP `metric` | cosine | BERTopic's default; the usual choice for text embeddings. |
-| UMAP `random_state` | 42 | Fixed [random seed](glossary.md#random-seed): "without it results change every run" (notebook comment). |
+| UMAP `random_state` | 42 | Fixed [random seed](glossary.md#random-seed): "without it results change every run" (notebook comment). 05 compares it with seeds 0, 1, 2 and 3 (§7). |
 | HDBSCAN `min_cluster_size` | 30 | Smallest group accepted as a topic. Chosen in 05 against 20, 25, 40 and 50 (§7). BERTopic's default is 10. |
-| HDBSCAN `min_samples` | not set, so 30 | When it is not set, the hdbscan library (0.8.42) uses `min_cluster_size` instead, so the effective value is 30. It sets how strict the clustering is about dense areas: a review is the core of a dense area only if at least 30 points, itself included, are close to it. A higher value is stricter and leaves more reviews as outliers, so it contributes to the 1,601 outliers. Not tuned. Because it follows `min_cluster_size`, it also changed in the runs of 05. |
+| HDBSCAN `min_samples` | not set, so 30 | When it is not set, the hdbscan library (0.8.42) uses `min_cluster_size` instead, so the effective value is 30. It sets how strict the clustering is about dense areas: a review is the core of a dense area only if at least 30 points, itself included, are close to it. It changes which reviews are left out as outliers, so it contributes to the 1,601 outliers. Not tuned: 06 keeps the value it gets without setting it, and 05 compares 5, 10, 15 and 30 (§7). Because it follows `min_cluster_size`, it also changed in the `min_cluster_size` runs of 05. |
 | CountVectorizer `min_df` | 5 | A keyword must appear in at least 5 topics, because BERTopic fits the vectorizer on one joined text per topic. Changes only the keywords. Chosen in 05 against 1 and 2 (§7); the library default is 1. |
 | CountVectorizer `ngram_range` | (1, 2) | Single words plus bigrams; a common choice for BERTopic keywords. Not tuned. |
-| MMR `diversity` | 0.3 | "The value recommended in the official BERTopic documentation" (notebook comment). The library default is 0.1. |
+| MMR `diversity` | 0.3 | "The value recommended in the official BERTopic documentation" (notebook comment). The library default is 0.1. 05 compares MMR with KeyBERTInspired and with extra stopwords (§7). |
 | `top_n_words` | 10 | BERTopic's default. |
 | `reduce_outliers` strategy / threshold | embeddings / 0.0 | Outliers were inspected and judged valid reviews, so all are reassigned by [cosine similarity](glossary.md#cosine-similarity). 0 is the library default threshold; the strategy was chosen over the default `distributions`. |
 
@@ -591,8 +698,8 @@ sets MMR again before merging.
 - 30 topics, with sizes from 52 to 1,214 reviews; 1,601 outliers before reduction, 0 after.
 - The check before saving passes.
 - **Retraining is reproducible in the locked environment.** Consecutive trainings on 2026-11-02 gave the same topic
-  for every review, the same sizes and the same keyword weights. The run with `min_cluster_size=30` in 05, with
-  precomputed embeddings, was checked once against this model and gave the same topic for every review (§7).
+  for every review, the same sizes and the same keyword weights. In 05, seed 42 with precomputed embeddings gives
+  the same topic for every review as this model; the check is cell 32 of 05 (§7).
 - **Rerun of 2026-11-04** in a fresh kernel, after the cells of steps 7-9 were added: same topic for every review,
   same 30 topics with the same sizes, same keywords. `trenord_reviews_topics.csv` and the model files are
   byte-identical to the previous run, except for the order in which the 624 stopwords are listed in
@@ -951,7 +1058,8 @@ The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 ## 11. Reproducibility
 
 **Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → dashboard. In normal use 01 is **not** rerun, because it
-would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped.
+would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. Its seed 42 check
+reads `trenord_reviews_topics.csv`, so on a fresh clone that cell needs 06 to have run first.
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
