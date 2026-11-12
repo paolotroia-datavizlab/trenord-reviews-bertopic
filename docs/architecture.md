@@ -52,7 +52,7 @@ flowchart TD
     N07 --> ANA[("trenord_reviews_analysis.csv")]
     N07 --> TOP[("top_reviews_per_topic.csv")]
     N07 --> FINAL[("bertopic_model_merged<br/>local only")]
-    N07 --> PNG2["three charts in reports/figures"]
+    N07 --> PNG2["four charts in reports/figures"]
     CLEAN --> N08["08 label validation"]
     LAB --> N08
     N08 --> STAB["stability and agreement tables"]
@@ -65,7 +65,9 @@ flowchart TD
 
 ### Produced files
 
-All files are in `data/processed/` unless stated otherwise. Row counts are in [Key numbers](#2-key-numbers).
+All files are in `data/processed/` unless stated otherwise. Row counts are in [Key numbers](#2-key-numbers). The
+notebooks themselves start with a one-sentence header only, so the input and output files of each notebook are listed
+in its section below.
 
 | File | Producer | Published |
 |---|---|---|
@@ -79,7 +81,7 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `bertopic_model_trained/` | 06 | no |
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 07 | yes |
 | `bertopic_model_merged/` | 07 | no |
-| `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png` | 07 | yes |
+| `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`, `chart_topic_priority.png` | 07 | yes |
 | `labeling/validation_sample.xlsx`, `labeling/validation_key.csv` (written only once, §10) | 08 | no (gitignored, contain review texts) |
 | `labeling/validation_disagreements.csv` (written again on every run, §10) | 08 | no (gitignored, contains review texts) |
 | `reports/figures/chart_label_confusion.png` | 08 | yes |
@@ -152,7 +154,8 @@ saves them in a file, exactly as received. Nothing is changed at this stage, so 
 to the original data.
 
 ### Input and output
-- Input: Google Play Store, through the unofficial `google-play-scraper` library (version 1.2.7).
+- Input: Google Play Store, app id `it.nordcom.app`, through the unofficial `google-play-scraper` library (version
+  1.2.7).
 - Output: `data/raw/trenord_reviews_raw.csv` with the columns
   `review_id, author, rating, text, thumbs_up, app_version, date, has_reply, reply_text, reply_date`.
 
@@ -207,8 +210,9 @@ a code that cannot be traced back without a secret key. It is the only step that
 everything after it works on protected data.
 
 ### Input and output
-- Input: the raw file (read only), plus the [secret key](glossary.md#secret-key) `PSEUDO_KEY` from `.env`.
-- Output: `trenord_reviews_anon.csv`, with the raw columns minus `author`.
+- Input: `data/raw/trenord_reviews_raw.csv` (read only), plus the [secret key](glossary.md#secret-key) `PSEUDO_KEY`
+  from `.env`.
+- Output: `data/processed/trenord_reviews_anon.csv`, with the raw columns minus `author`.
 
 ### The secret key
 - **Generation.** 64 hexadecimal characters (256 random bits), generated in the project venv with
@@ -774,8 +778,9 @@ sets MMR again before merging.
 
 **In plain words.** In 06 the model grouped the Italian reviews into 30 topics, each identified only by a number.
 This notebook reads every topic, gives it a short name and a category, or sets it aside when its reviews say nothing
-specific. It merges topics with the same name, draws three charts, checks how much the excluded reviews change the
-picture, and saves the files used by the dashboard after checking that no personal data has slipped through.
+specific. It merges topics with the same name, draws four charts, checks how much the excluded reviews change the
+picture, and saves the files used by the dashboard after checking that no personal data has slipped through. It ends
+with the results and a short list of recommendations.
 
 ### Input and output
 - Input: `trenord_reviews_topics.csv` and `bertopic_model_trained/`, both from 06. `trenord_reviews_clean.csv` is used only
@@ -786,8 +791,8 @@ picture, and saves the files used by the dashboard after checking that no person
   - `top_reviews_per_topic.csv` (`topic_label, category, rating, thumbs_up, date, text`): the 5 most upvoted reviews
     with at least one upvote, for each of the 12 topics.
   - `bertopic_model_merged/`: the model after the merges.
-  - Three charts in `reports/figures/`, saved with `dpi=150`: `chart_reviews_per_topic.png`,
-    `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`.
+  - Four charts in `reports/figures/`, saved with `dpi=150`: `chart_reviews_per_topic.png`,
+    `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`, `chart_topic_priority.png`.
 
 ### Categories
 The categories are the project's own, chosen after reading the topics:
@@ -809,9 +814,10 @@ topics.
 5. Apply the labels with `map()` (cell 8).
 6. Derive the merge list from the labels (cell 9), merge (cell 10) and check the merge (cell 11).
 7. Build the final topics table with 95% confidence intervals and the category table (cell 12).
-8. Draw the three charts, each followed by how to read it (cells 13-18).
-9. Run the two bias checks (cells 19-20), read in cell 21.
-10. Save the outputs (cell 22) and check the saved files (cells 23-24). The results are summarised in cell 25.
+8. Draw the four charts, each followed by how to read it (cells 13-20).
+9. Run the two bias checks (cells 21-22), read in cell 23.
+10. Save the outputs (cell 24) and check the saved files (cells 25-26). The results are summarised in cell 27 and
+    the recommendations in cell 28.
 
 ### Topic overview table
 One row per 06 topic with what was looked at to label it. Review texts are not shown, because notebook outputs are
@@ -924,7 +930,7 @@ is used as is common for star ratings. The intervals show that the App Issue ave
 topics and Improvement Feedback are clearly above them.
 
 ### Charts and how to read them
-All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
+All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
 `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`.
 - **`chart_reviews_per_topic.png`** (cell 13). Horizontal bars, largest topic at the top, with the number of reviews
   and the share of the analysis set at the end of each bar. App Issue covers 8 of the 12 topics and 84.9% of the
@@ -941,15 +947,23 @@ All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cat
   borderline. Station Issues has "stazioni", "stazione" and "milano" at the top, and "stazioni preferite" from
   topic 7 next to place names from topic 28. The top words of App Not Working are generic ("app", "aggiornamento",
   "applicazione").
+- **`chart_topic_priority.png`** (cell 19). One dot per topic, with its share of the analysed reviews on the x axis
+  and its average rating on the y axis, the 95% interval as a vertical line, the full 1-5 scale and a dashed line at
+  the average of all analysed reviews (1.93). Each name sits next to its dot. The positions are set by hand in
+  `LABEL_POSITIONS`, and the cell checks that no two names overlap (0 overlaps). Problems sit low and praise high.
+  Among the problems the averages are close (1.40 to 1.78) and the intervals overlap, so what separates them is how
+  often they are mentioned, from 25.0% for Inaccurate Train Info to 2.0% for QR Code Failures.
+
+![Share and average rating per topic](../reports/figures/chart_topic_priority.png)
 
 ### Bias checks
-- **Ratings of excluded and analysed reviews** (cell 19). The excluded reviews average 3.66 stars, the analysed ones
+- **Ratings of excluded and analysed reviews** (cell 21). The excluded reviews average 3.66 stars, the analysed ones
   1.93, all Italian reviews 2.17. The excluded reviews are short verdicts at both ends of the scale: 55.2% have 5
   stars and 27.5% have 1 star. The analysed ones are mostly negative: 62.3% have 1 star. The full shares are in Key
   numbers. Removing the excluded reviews makes the analysis set more negative than all Italian reviews, an
   [exclusion bias](glossary.md#exclusion-bias): the topics describe what users write about when they say something
   specific, not overall satisfaction.
-- **Share excluded per year** (cell 20). It goes from 7.4% in 2017 to 23.8% in 2020, with a peak between 2019 and
+- **Share excluded per year** (cell 22). It goes from 7.4% in 2017 to 23.8% in 2020, with a peak between 2019 and
   2021 (18.6%, 23.8%, 17.3%). Overall rating trends use all reviews and are not affected. Trends of single topics over
   time use only the analysed reviews, so in 2019-2021 they rest on a smaller part of each year's reviews.
 
@@ -967,6 +981,32 @@ All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cat
 | `review_id` pseudonymised (12 hex characters) for every row | PASS |
 | Every review found in clean.csv, `reply_text` identical | PASS |
 | 12 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
+| No two topic names overlap on `chart_topic_priority.png` | PASS (0 overlaps) |
+
+### Recommendations
+
+Cell 28 turns the results into five recommendations. They come from what reviewers write. People who are unhappy
+tend to write more, so the shares describe what reviewers complain about, not the experience of every user. All App
+Issue topics have average ratings between 1.40 and 1.78 stars with overlapping confidence intervals, so the order
+follows how often each problem is mentioned, not how severe it is. Once topics over time are analysed, the order
+should be checked against which problems are recent.
+
+1. Fix the train information first. Inaccurate Train Info is the largest topic (25.0% of the analysed reviews).
+   Reviewers describe an app that shows a train on time while the station board shows a delay or a cancellation. It
+   is also the most reliable label: the manual coding confirmed all 14 sampled reviews, and at least 93.5% of its
+   reviews keep this label in every seed tested (§10).
+2. Make buying and using a ticket reliable. Ticket Purchase Failures (19.1%), Subscription & Payment Failures
+   (10.7%) and QR Code Failures (2.0%) together are 31.7% of the reviews (1,902 of 5,998). They describe the same
+   journey, from paying to showing the ticket at the gate. With one of the seeds tested, the model merges the
+   subscription reviews into Ticket Purchase Failures, so these topics are best treated as one area.
+3. Improve stability and usability: App Not Working (10.9%), Poor Usability (8.3%), Login & Account Issues
+   (4.8%) and Station Issues (4.1%). About half of the sampled App Not Working reviews (6 of 14 in the manual coding)
+   only say that the app does not work, without details.
+4. Start replying to reviews again. Trenord replied to 83% to 100% of Italian reviews every year until 2020, and
+   to fewer than 4% every year since 2022. Ratings fell in the same years, but this analysis does not show that one
+   caused the other.
+5. Keep what users like. Ease of Use and Easy Purchases are 12.3% of the reviews. Changes to the app should not
+   break them.
 
 ### The two models
 - **`bertopic_model_trained/`** is trained and saved by 06 and read by 07. Its topic ids are the ones the label map refers
@@ -1503,6 +1543,11 @@ CSVs of 07 were identical to the previous commit. The six charts of 04 changed o
 the same name, Station Issues (§9). In the labeled and analysis CSVs only `topic_label` and `topic_merged` changed;
 every other column is identical to the previous commit. The three charts of 07 and the confusion matrix of 08 were
 drawn again with the new labels.
+
+**Second rerun of 2026-11-12.** 07 was rerun in a fresh kernel after the priority chart and the recommendations were
+added and the markdown of every notebook was shortened. The three published CSVs and the three earlier charts of 07
+are byte-identical to the previous commit; `chart_topic_priority.png` is new. The other notebooks changed only in
+their markdown and were not rerun.
 
 **Deterministic steps.**
 - 02, given the same raw file and key.

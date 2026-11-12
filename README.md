@@ -1,5 +1,6 @@
 # Trenord App Reviews: Topic Modeling with BERTopic
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://trenord-review-analysis.streamlit.app)
 [![tests](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml/badge.svg)](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml)
 
 What do users complain about, and what do they appreciate, in the Trenord train app? This project collects
@@ -27,6 +28,17 @@ and publishes the results in an interactive Streamlit dashboard.
 - Labels checked by hand: on a blind coding of 196 sampled reviews, my labels and the model's agree with Cohen's
   kappa 0.812 (95% CI 0.763 to 0.862); weighted to all Italian reviews, the agreement is 86.6% (95% CI 81.7% to 91.2%).
 
+## Recommendations
+
+Ordered by how often each problem is mentioned, since the App Issue ratings are all close. Full text with the numbers
+behind each point: [Recommendations](docs/architecture.md#recommendations).
+
+1. Fix the train information first: Inaccurate Train Info is the largest topic (25.0% of the analysed reviews).
+2. Make buying and using a ticket reliable: tickets, subscriptions and QR codes together are 31.7% of the reviews.
+3. Improve stability and usability: App Not Working, Poor Usability, Login & Account Issues and Station Issues.
+4. Start replying to reviews again: replies fell from 83-100% a year until 2020 to less than 4% since 2022.
+5. Keep what users like: ease of use and easy purchases, 12.3% of the reviews.
+
 ## Tech stack
 
 Python 3.13 · pandas · spaCy · lingua · BERTopic (sentence-transformers, UMAP, HDBSCAN) · matplotlib · Streamlit · Plotly
@@ -52,6 +64,7 @@ reports/figures/  charts and the dashboard screenshot:
   chart_reviews_per_topic.png          07: reviews per topic
   chart_avg_rating_per_topic.png       07: average rating per topic, with 95% confidence intervals
   chart_keywords_per_topic.png         07: top keywords of each topic
+  chart_topic_priority.png             07: share of reviews against average rating, one dot per topic
   chart_label_confusion.png            08: my labels against the model labels, 196 sampled reviews
   dashboard_overview.png               dashboard screenshot
 tests/            dashboard smoke tests (Streamlit AppTest)
