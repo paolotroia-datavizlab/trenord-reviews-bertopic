@@ -22,11 +22,19 @@ Here topic keywords may be single words or bigrams.
 ## Blind coding
 Labeling a sample of items by hand without seeing the label given before, here by the model. The hidden labels
 are kept in a separate key and compared only after the coding, so they cannot influence it.
-Notebook 08 prepares a blind coding sample of 196 reviews.
+Notebook 08 prepares a blind coding sample of 196 reviews and compares my coding with the model labels.
 
 ## BOM (byte-order mark)
 An invisible marker at the start of a text file that declares its encoding.
 The CSV files are saved as `utf-8-sig`, which adds a BOM so that spreadsheet programs read accented characters correctly.
+
+## Bootstrap
+A way to see how much a number computed on a sample would change with another sample, using only the sample at
+hand. It draws many new samples from the sample itself, of the same size and with replacement, so some items come
+out twice and others not at all, and computes the number again on each. The spread of these values shows the
+uncertainty. A 95% percentile interval goes from the 2.5th to the 97.5th percentile of the values.
+Notebook 08 draws 2,000 resamples, each with 14 reviews drawn with replacement inside each model label, for the
+[confidence intervals](#confidence-interval) of the agreement.
 
 ## c-TF-IDF
 Class-based TF-IDF: a score for how characteristic a word is of one topic compared with all the others.
@@ -43,11 +51,27 @@ The group a topic label belongs to. This project uses four categories of its own
 Notebook 07 assigns them by hand. No topic is made mostly of requests for new features, so there is no category
 for them.
 
+## Cohen's kappa
+A score for the agreement between two coders who label the same items, corrected for the agreement they would
+reach by chance. It is (observed agreement - chance agreement) / (1 - chance agreement), where the chance agreement
+comes from how often each coder used each label. 1 means full agreement, 0 means no more than chance, and it can be
+negative. The [Landis and Koch scale](#landis-and-koch-scale) gives names to its ranges.
+Notebook 08 uses it to compare my [blind coding](#blind-coding) of 196 reviews with the model labels.
+
 ## Confidence interval
 A range around an average that shows how precise the average is. A 95% interval is built so that, over many
 samples, 95% of the intervals computed this way would contain the true average. It is the average plus or minus a
 margin: the [standard error](#standard-error) times a value from the [t distribution](#t-distribution).
-In 07 every final topic has a 95% interval for its average rating. Small topics have wide intervals.
+In 07 every final topic has a 95% interval for its average rating. Small topics have wide intervals. In 08 the
+intervals of the agreement come from a [bootstrap](#bootstrap) instead: kappa is not an average, and the bootstrap
+can follow the way the stratified sample was drawn.
+
+## Confusion matrix
+A table that crosses two labelings of the same items, one in the rows and the other in the columns. Each cell
+counts the items with that pair of labels. The diagonal holds the agreements; the other cells show which labels get
+mixed up.
+In 08 the rows are my labels and the columns the model labels; the chart is
+`reports/figures/chart_label_confusion.png`.
 
 ## Continuation token
 A bookmark returned by a paginated interface that tells the next request where the previous page ended.
@@ -98,6 +122,13 @@ highest [c-TF-IDF](#c-tf-idf) weight and keeps the 10 whose embedding is closest
 representative reviews of the topic.
 Notebook 05 compares it with [MMR](#mmr-maximal-marginal-relevance); it changes only the keywords.
 
+## Landis and Koch scale
+Names for ranges of [Cohen's kappa](#cohens-kappa), proposed by J. Richard Landis and Gary G. Koch in 1977: below 0
+poor, 0 to 0.20 slight, 0.21 to 0.40 fair, 0.41 to 0.60 moderate, 0.61 to 0.80 substantial, 0.81 to 1.00 almost
+perfect. The authors chose the bands by judgment and called them arbitrary, so the scale is a convention, not a
+test.
+08 uses it to describe its kappa.
+
 ## Language detection confidence
 The probability, between 0 and 1, that a language detector assigns to its best guess for a text.
 Notebook 03 accepts Italian at any confidence and other languages only at 0.5 or above.
@@ -141,6 +172,11 @@ Training produced outliers, which were then reassigned.
 Assigning outliers to an existing topic after training, here to the topic whose centre is most similar to the
 outlier's embedding.
 All outliers were reassigned, so every Italian review has a topic.
+
+## Precision
+For one label, the share of the items given that label that really belong to it, judged against a reference.
+In 08 the reference is my blind coding: the precision of a model label is the share of its 14 sampled reviews to
+which I gave the same label. It is the per-label share used in the [weighted accuracy](#weighted-accuracy).
 
 ## Pseudonymization
 Replacing direct identifiers with artificial values, so that records cannot be linked to a person without extra
@@ -226,4 +262,5 @@ It reduces the review embeddings to 5 dimensions before clustering.
 ## Weighted accuracy
 An accuracy in which each group counts with its share of the data, not with its share of the sample. It is
 needed when the sample has the same number of items from groups of very different sizes.
-It will be used to compare the blind coding of notebook 08 with the model labels.
+Notebook 08 calls it the weighted agreement: the [precision](#precision) of each model label, weighted by the
+share of all 6,951 Italian reviews that the label holds.

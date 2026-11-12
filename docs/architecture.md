@@ -55,8 +55,9 @@ flowchart TD
     N07 --> PNG2["three charts in reports/figures"]
     CLEAN --> N08["08 label validation"]
     LAB --> N08
-    N08 --> STAB["stability table, no files"]
-    N08 --> SAMPLE[("validation_sample.xlsx, validation_key.csv<br/>labeling/, local only")]
+    N08 --> STAB["stability and agreement tables"]
+    N08 --> SAMPLE[("validation_sample.xlsx, validation_key.csv,<br/>validation_disagreements.csv<br/>labeling/, local only")]
+    N08 --> PNG3["chart_label_confusion.png<br/>reports/figures"]
     LAB --> DASH["dashboard/app.py, Streamlit"]
     ANA --> DASH
     TOP --> DASH
@@ -80,6 +81,8 @@ All files are in `data/processed/` unless stated otherwise. Row counts are in [K
 | `bertopic_model_merged/` | 07 | no |
 | `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png` | 07 | yes |
 | `labeling/validation_sample.xlsx`, `labeling/validation_key.csv` (written only once, §10) | 08 | no (gitignored, contain review texts) |
+| `labeling/validation_disagreements.csv` (written again on every run, §10) | 08 | no (gitignored, contains review texts) |
+| `reports/figures/chart_label_confusion.png` | 08 | yes |
 
 All CSVs are written with `encoding="utf-8-sig"` and `index=False`.
 
@@ -128,6 +131,17 @@ This table is the single source of numbers for the article. **All languages** fi
 | Bias check: rating shares, excluded | 1★ 27.5% · 2★ 2.0% · 3★ 2.8% · 4★ 12.5% · 5★ 55.2% |
 | Bias check: rating shares, analysed | 1★ 62.3% · 2★ 12.0% · 3★ 6.9% · 4★ 7.8% · 5★ 11.0% |
 | Bias check: share excluded per year | from 7.4% (2017) to 23.8% (2020), peak in 2019-2021 (18.6%, 23.8%, 17.3%) |
+
+### Label validation
+
+| Measure | Value |
+|---|---|
+| Reviews that keep their label with UMAP seeds 0, 1, 2, 3 | 94.6%, 94.1%, 93.6%, 79.1% |
+| Blind coding sample | 196 reviews, 14 per model label |
+| Cohen's kappa, sample | **0.808** (95% CI 0.759 to 0.857) |
+| Raw agreement, sample | 82.1% (95% CI 77.6% to 86.7%) |
+| Weighted agreement, all reviews | **86.4%** (95% CI 81.6% to 90.9%) |
+| Precision per label | from 42.9% (Missing Stations) to 100.0% (four labels) |
 
 ---
 
@@ -995,17 +1009,22 @@ Both are local only and gitignored.
 
 ## 10. Notebook 08 - Label validation
 
-08 checks the 13 labels of 07 in two ways. Part 1 trains the model of 06 again with other UMAP seeds and measures
-how many reviews keep their label. Part 2 draws a sample of reviews for [blind coding](glossary.md#blind-coding)
-by hand, to be compared later with the model labels. It changes no label and writes nothing in `data/processed/`.
+08 checks the 13 labels of 07 in three parts. Part 1 trains the model of 06 again with other UMAP seeds and
+measures how many reviews keep their label. Part 2 draws a sample of reviews for
+[blind coding](glossary.md#blind-coding) by hand. Part 3 compares my coding of the sample with the model labels. It
+changes no label and writes nothing in `data/processed/`.
 
 ### Input and output
 - Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`, with `text_clean` as in 06, and
   `trenord_reviews_labeled.csv` (from 07), for its `topic` and `topic_label` columns. Cell 3 checks that the two
   files list the same reviews in the same order.
-- Output: the stability table in the notebook, and two files in `labeling/` (gitignored, they contain review
-  texts): `validation_sample.xlsx` and `validation_key.csv`. They are written only if `validation_sample.xlsx`
-  does not exist yet, so a rerun never overwrites the coding.
+- Part 3 also reads the sheet `coding` of `labeling/validation_sample.xlsx`, with my labels, and
+  `labeling/validation_key.csv`.
+- Output: the stability and agreement tables in the notebook, `reports/figures/chart_label_confusion.png`, and
+  three files in `labeling/` (gitignored, they contain review texts):
+  - `validation_sample.xlsx` and `validation_key.csv`, written only if `validation_sample.xlsx` does not exist
+    yet, so a rerun never overwrites the coding;
+  - `validation_disagreements.csv`, written again on every run from the other two.
 
 ### Method
 1. Load both files and check that they list the same reviews (cell 3). Prepare the texts as in 06 (cell 4).
@@ -1018,6 +1037,16 @@ by hand, to be compared later with the model labels. It changes no label and wri
    keep their label, and show where the reviews of the lost labels go (cells 10-12).
 6. Write the codebook (cell 15), draw a [stratified sample](glossary.md#stratified-sample) (cell 16), shuffle it
    (cell 17), write the two files (cell 18) and read them back (cell 19).
+7. Load my coding and check it: 196 rows, every `my_label` filled, only the 15 labels of the codebook. A failed
+   check raises an error that names only the `sample_id` of the wrong rows (cell 23). Join it with the key on
+   `sample_id` (cell 24).
+8. Compute the raw agreement and [Cohen's kappa](glossary.md#cohens-kappa) on the sample (cell 26), and the
+   weighted agreement on all reviews (cell 28).
+9. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 30-31).
+10. Compute the [precision](glossary.md#precision) of each label (cell 33), the
+    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 35-36) and the five most frequent
+    disagreements (cell 37).
+11. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 39).
 
 ### Parameters
 | Parameter | Value |
@@ -1026,6 +1055,8 @@ by hand, to be compared later with the model labels. It changes no label and wri
 | Model settings | as in 06: UMAP `n_neighbors=15`, `n_components=5`, `min_dist=0.0`, `metric="cosine"`; HDBSCAN `min_cluster_size=30`; `min_df=5`; MMR `diversity=0.3`; outliers reduced with `strategy="embeddings"`, `threshold=0.0` |
 | `SAMPLE_PER_LABEL` | 14 |
 | `SAMPLE_SEED` | 42, for the sample and for its order |
+| `BOOTSTRAP_RESAMPLES` | 2000 |
+| `BOOTSTRAP_SEED` | 42, for `np.random.default_rng` |
 
 ### Results: one model per seed
 | Seed | Topics | Outliers before reduction | Labels that are the majority in at least one topic |
@@ -1107,14 +1138,96 @@ A simple random sample of 196 would follow the label sizes: mostly Unreliable Tr
 Ticket Purchase Failures, and one or two reviews from Missing Stations (71 reviews) or Version Comparisons (81).
 That is too few to say anything about the small labels. With 14 from each, every label can be checked.
 
-#### Why a weighted accuracy will be needed later
+#### Why a weighted agreement is needed
 
 In the sample every label has
 the same weight, 14 of 196, while in the data the sizes go from 71 to 1,501 reviews. The plain share of matches in
-the sample therefore over-weights the small labels. To estimate the accuracy over all reviews, the accuracy of each
-label will be weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy)). A made-up example with two labels: label A holds 90% of the
+the sample therefore over-weights the small labels. To estimate the agreement over all reviews, the agreement of each
+label is weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy), called weighted
+agreement in 08). A made-up example with two labels: label A holds 90% of the
 reviews and is right 9 times out of 10 in the sample, label B holds 10% and is right 5 times out of 10. The plain
 share of matches is 14 of 20, 70%; the weighted accuracy is 0.9 x 90% + 0.1 x 50% = 86%.
+
+### Agreement between my coding and the model
+I coded the 196 reviews in `validation_sample.xlsx` without opening the key. Cell 23 found 196 rows, no empty label,
+no label outside the codebook, and 15 of the 15 labels used. Cell 24 joined all 196 rows with the key.
+
+The raw agreement is the share of reviews where my label equals the model label. Cohen's kappa corrects it for the
+agreement expected by chance, given how often each of us used each label. Both use the 15 labels used by either of
+us, None of these included; the model never gives None of these, so those reviews count as disagreements.
+
+The weighted agreement first computes the share of agreement inside each model label (its precision), then
+averages the 14 shares weighting each label by its number of reviews in `trenord_reviews_labeled.csv`, EXCLUDE
+included. Each label then weighs as much as it does in the data, so the result estimates the agreement on a review
+drawn at random from all 6,951.
+
+The intervals come from one bootstrap loop (cell 30): 2,000 resamples, each drawn as the sample was, 14 reviews with
+replacement inside each model label, with `np.random.default_rng(42)`. The kappa of each resample uses the same 15
+labels. The weights stay fixed, because they come from all reviews. The 95% interval is the 2.5th to 97.5th
+percentile of the 2,000 values.
+
+| Measure | Describes | Value | 95% CI |
+|---|---|---|---|
+| Reviews with the same label | sample | 161 of 196 | - |
+| Raw agreement | sample | 82.1% | 77.6% to 86.7% |
+| Cohen's kappa | sample | 0.808 | 0.759 to 0.857 |
+| Weighted agreement | all 6,951 reviews | 86.4% | 81.6% to 90.9% |
+
+The precision of a label is the share of the 14 reviews the model put in it to which I gave the same label (cell 33).
+
+| Label | Sampled reviews | Confirmed | Precision |
+|---|---|---|---|
+| Unreliable Train Status | 14 | 14 | 100.0% |
+| Ticket Purchase Failures | 14 | 12 | 85.7% |
+| EXCLUDE | 14 | 13 | 92.9% |
+| App Crashes & Freezes | 14 | 7 | 50.0% |
+| Subscription Purchase Failures | 14 | 14 | 100.0% |
+| Poor Usability | 14 | 10 | 71.4% |
+| Ease of Use | 14 | 13 | 92.9% |
+| Login & Account Issues | 14 | 13 | 92.9% |
+| Easy Purchase & Payment | 14 | 9 | 64.3% |
+| Station & Favorites Bugs | 14 | 12 | 85.7% |
+| QR Code Failures | 14 | 14 | 100.0% |
+| Rail Service Complaints | 14 | 10 | 71.4% |
+| Version Comparisons | 14 | 14 | 100.0% |
+| Missing Stations | 14 | 6 | 42.9% |
+
+#### Confusion matrix
+
+![Confusion matrix of my labels and the model labels](../reports/figures/chart_label_confusion.png)
+
+`chart_label_confusion.png` (cell 36): my labels in the rows, the model labels in the columns, both in the order of
+the stability table, with None of these as the last row. Each cell counts the sampled reviews with that pair of
+labels; empty cells are 0. The diagonal holds the 161 agreements; every cell off the diagonal is a disagreement.
+The colour goes from white to dark blue as the count grows. Each column adds up to 14.
+
+| My label → model label | Reviews |
+|---|---|
+| EXCLUDE → App Crashes & Freezes | 6 |
+| EXCLUDE → Missing Stations | 3 |
+| Ticket Purchase Failures → Missing Stations | 2 |
+| EXCLUDE → Poor Usability | 2 |
+| Poor Usability → Rail Service Complaints | 2 |
+
+The 35 disagreements fall in 24 pairs of labels. The table shows the five most frequent; a sixth pair, None of these
+→ Easy Purchase & Payment, also has 2 reviews and is left out only by the order of the table (cell 37). 13
+disagreements are reviews I coded EXCLUDE and 5 are reviews I coded None of these.
+
+#### Reading the agreement
+- The kappa, 0.808 (0.759 to 0.857), sits on the border between "substantial" (0.61 to 0.80) and "almost perfect"
+  (0.81 to 1.00) on the [Landis and Koch](glossary.md#landis-and-koch-scale) (1977) scale, and its interval covers
+  both bands. The scale is a convention, with bands chosen by judgment, not a test.
+- The raw agreement and the kappa describe the 196 sampled reviews, where each model label weighs the same. The
+  weighted agreement estimates the agreement on all 6,951 reviews. It is higher because most reviews are in labels
+  with a high precision: Unreliable Train Status 100.0%, Ticket Purchase Failures 85.7%, EXCLUDE 92.9%. The lowest,
+  Missing Stations with 42.9%, holds 71 reviews.
+- 13 of the 35 disagreements are reviews I coded EXCLUDE while the model gave them a specific label. The largest
+  pair is EXCLUDE → App Crashes & Freezes, with 6 reviews, so only 7 of the 14 App Crashes & Freezes reviews are
+  confirmed. Most disagreements are about the line between a generic verdict and a specific problem.
+- Missing Stations is the most mixed label: 6 of its 14 reviews are confirmed, and the other 8 go to five different
+  labels, 3 of them to EXCLUDE and 2 to Ticket Purchase Failures.
+- `validation_disagreements.csv` (cell 39) holds the 35 disagreements with `sample_id`, text, my label and model
+  label, to study them. It is not published.
 
 ### Design decisions
 - The training function is written in 08, not imported from 05: notebooks do not import each other, and 08
@@ -1122,25 +1235,46 @@ share of matches is 14 of 20, 70%; the weighted accuracy is 0.9 x 90% + 0.1 x 50
 - The ARI of 05 compares the 30 topics. The results are reported on the 13 labels, so 08
   measures whether the labels come back.
 - Each new topic takes the majority label of its reviews. This needs no reading of the new topics, so it can be repeated for every seed.
-- The two files are written only once. The Excel file will hold my coding, so it is never overwritten. If the data changed, cell
+- The two files are written only once. The Excel file holds my coding, so it is never overwritten. If the data changed, cell
   19 would show `Same texts as the sample: False`.
+- Kappa uses every label used by either of us, None of these included. Leaving None of these out would drop 5
+  reviews that the model did label, and make the agreement look higher.
+- The bootstrap resamples inside each model label, 14 per label, because the sample was drawn that way. A resample
+  of 196 from the whole sample would let the number of reviews per label vary, which the real sample never does.
+- The disagreements file is written again on every run: it is computed from the other two files and holds no work
+  of its own.
+- Two warnings print a local path, so cell 2 hides them with `warnings.filterwarnings`, before the imports: tqdm
+  warns at import that ipywidgets is missing, and openpyxl warns when it reads the coding file, because Excel added
+  an extension to the dropdown that openpyxl cannot read. The labels are read anyway.
 
 ### Validation
-- Rerun of 2026-11-05 in a fresh kernel, 406 s.
-- Seed 42 gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews.
-- The two files were created in that run and read back as above. `labeling/` is gitignored, and neither file is
-  tracked or staged.
-- The saved outputs show only counts and shares: a scan found no key, review text (also as tokens), author name or
-  local path.
+- Rerun of 2026-11-05 in a fresh kernel, 406 s. The two files were created in that run and read back as above.
+- Rerun of 2026-11-12 in a fresh kernel with the `venv_trenord` kernel, 395 s, after part 3 was added:
+  - seed 42 gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews, and the outputs of cells 7
+    to 17, the stability table included, are identical to the previous run;
+  - `validation_sample.xlsx` and `validation_key.csv` were not written again: cell 18 printed that the Excel file
+    already exists, and both files have the same SHA-256 hash before and after the run;
+  - cell 19 reads 196 coded reviews, and the checks of cell 23 pass.
+- A first attempt with the kernel named `python3` started the system Python instead of the venv, and seed 42 gave
+  different topics. The notebook must run in the `venv_trenord` kernel, the environment of the lock file.
+- `labeling/` is gitignored, and none of its files is tracked or staged.
+- The saved outputs show only counts, shares and labels: a scan found no key, review text (also as tokens), author
+  name or local path.
 
 ### Known limitations
 - Four seeds are compared with seed 42. Other seeds may split the topics in other ways.
 - The majority mapping is generous: each new topic takes the label that fits most of its reviews. It shows whether
   the themes come back, not whether a person reading the new topics would name them the same way.
 - The mapping can only use the current labels, so it cannot find a theme that appears only with a new seed.
-- The sample has not been coded yet. It will be coded by one person, the same who wrote the labels and the
-  codebook, so the comparison checks consistency more than independent agreement.
-- 14 reviews per label give only a rough accuracy for each label, because each review counts for 1 in 14.
+- The sample was coded by one person, the same who wrote the labels and the codebook, so the comparison checks
+  consistency more than independent agreement.
+- The coding was blind to the model label of each review, but not to the labeling work of 07, where I read the
+  keywords and many reviews of each topic.
+- The confidence intervals describe sampling uncertainty only. They do not include the uncertainty of my judgment
+  or of the codebook definitions.
+- 14 reviews per label give only a rough precision for each label, because each review counts for 1 in 14.
+- The sample is drawn by model label, so it measures precision. How many reviews of a theme the model put in another
+  label (the recall) is not measured.
 
 ---
 
@@ -1253,7 +1387,8 @@ The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 **Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08, then the dashboard. In normal use 01 is **not** rerun,
 because it would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. It reads
 only `trenord_reviews_clean.csv`. 08 needs the output of 07 and writes only to `labeling/`, which the dashboard
-does not read; its two files are written only once (§10).
+does not read, and one chart to `reports/figures/`. Its coding files are written only once (§10). It must run in
+the `venv_trenord` kernel.
 
 **Environment.**
 - Python 3.13.0 (`.python-version`).
@@ -1332,7 +1467,7 @@ They cannot regenerate the published topics and labels exactly without the origi
 | Raw reviews (`data/raw/`) | local only, gitignored |
 | Anon, clean and topics CSVs | local only, gitignored |
 | BERTopic models | local only, gitignored |
-| Manual labeling notes and the validation sample of 08 (`labeling/`, contain review texts) | local only, gitignored |
+| Manual labeling notes, the validation sample of 08 with its key and the disagreements file (`labeling/`, contain review texts) | local only, gitignored |
 | Secret key (`.env`) | local only, gitignored and never committed; rotated on 2026-11-02; `.env.example` holds a placeholder |
 | Labeled, analysis and top-reviews CSVs | published: review text, rating, date, app version and developer reply; no author, pseudonymised id |
 | Charts | published (aggregates only) |
@@ -1349,14 +1484,15 @@ published `review_id` comes from the new key. Ids published before the rotation 
 
 **Notebook outputs.** The notebooks print only counts, aggregates, keywords and, in 02, a preview of non-text
 columns. A scan of all saved outputs after the 2026-11-04 rerun found no key, review or reply text (also as
-tokens), author name or local path. The same scan of 08, on 2026-11-05, found none either.
+tokens), author name or local path. The same scan of 08, on 2026-11-05 and again on 2026-11-12 after part 3 was
+added, found none either.
 
 ---
 
 ## 14. Future work
 
-- **Compare the blind coding with the model labels** (§10), label by label, with a weighted accuracy for all
-  reviews.
+- A second coder for the blind sample of 08 (§10), to measure the agreement between two people and not only between
+  the labels and their author.
 - **Sentiment analysis of the text**, to check the ratings and find the reviews where text and rating disagree.
 - **Aspect-based sentiment analysis**, to capture several issues and opinions within one review instead of one
   topic per review.

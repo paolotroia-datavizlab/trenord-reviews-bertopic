@@ -24,6 +24,8 @@ and publishes the results in an interactive Streamlit dashboard.
 - **What users like:** ease of use is the largest Praise topic (463 reviews, 4.54★).
 - **Read with care:** the 953 excluded reviews are short verdicts, 55.2% with 5★ and 27.5% with 1★, so the analysed
   reviews are more negative than all Italian reviews (1.93★ against 2.17★).
+- Labels checked by hand: on a blind coding of 196 sampled reviews, my labels and the model's agree with Cohen's
+  kappa 0.808 (95% CI 0.759 to 0.857); weighted to all Italian reviews, the agreement is 86.4% (95% CI 81.6% to 90.9%).
 
 ## Tech stack
 
@@ -44,12 +46,13 @@ notebooks/        pipeline, run in this order:
   05_model_selection.ipynb             compare BERTopic settings
   06_topic_model_training.ipynb        train BERTopic
   07_topic_labeling.ipynb              label the topics, export the dashboard files
-  08_label_validation.ipynb            stability of the labels, sample for blind coding
+  08_label_validation.ipynb            stability of the labels, blind coding, agreement with the model
 reports/figures/  charts and the dashboard screenshot:
   six charts from 04                   ratings and developer replies over time
   chart_reviews_per_topic.png          07: reviews per topic
   chart_avg_rating_per_topic.png       07: average rating per topic, with 95% confidence intervals
   chart_keywords_per_topic.png         07: top keywords of each topic
+  chart_label_confusion.png            08: my labels against the model labels, 196 sampled reviews
   dashboard_overview.png               dashboard screenshot
 tests/            dashboard smoke tests (Streamlit AppTest)
 ```
