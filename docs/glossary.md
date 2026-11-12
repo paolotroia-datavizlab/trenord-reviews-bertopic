@@ -175,8 +175,9 @@ All outliers were reassigned, so every Italian review has a topic.
 
 ## Precision
 For one label, the share of the items given that label that really belong to it, judged against a reference.
-In 08 the reference is my blind coding: the precision of a model label is the share of its 14 sampled reviews to
-which I gave the same label. It is the per-label share used in the [weighted accuracy](#weighted-accuracy).
+In 08 the reference is my blind coding: the precision of a model label is the share of its sampled reviews to
+which I gave the same label. Station Issues joins two strata of the sample, so its precision weights the share
+inside each stratum by the size of the stratum.
 
 ## Pseudonymization
 Replacing direct identifiers with artificial values, so that records cannot be linked to a person without extra
@@ -207,7 +208,7 @@ The multilingual model `paraphrase-multilingual-mpnet-base-v2` produces the revi
 ## Smoke test
 A quick test that runs a program end to end to check that nothing breaks, without verifying every result in
 detail.
-The dashboard is smoke-tested in 18 filter scenarios with Streamlit's AppTest.
+The dashboard is smoke-tested in 17 filter scenarios with Streamlit's AppTest.
 
 ## Sparkline
 A very small line or bar chart without axes, shown next to a number to indicate its trend.
@@ -226,7 +227,7 @@ The spaCy Italian stopword list is removed in lemmatization, topic keywords and 
 ## Stratified sample
 A sample drawn separately from each group (stratum), with a set number of items from each, instead of from all
 items at once. It guarantees enough items from the small groups, but its proportions differ from the data.
-Notebook 08 draws 14 reviews from each of the 13 labels and from EXCLUDE.
+Notebook 08 draws 14 reviews from each of 14 strata: the 13 labels of the time the sample was drawn, and EXCLUDE.
 
 ## t distribution
 A probability distribution similar to the normal one but with heavier tails, used when the spread of the
@@ -262,5 +263,5 @@ It reduces the review embeddings to 5 dimensions before clustering.
 ## Weighted accuracy
 An accuracy in which each group counts with its share of the data, not with its share of the sample. It is
 needed when the sample has the same number of items from groups of very different sizes.
-Notebook 08 calls it the weighted agreement: the [precision](#precision) of each model label, weighted by the
-share of all 6,951 Italian reviews that the label holds.
+Notebook 08 calls it the weighted agreement: the share of agreement inside each stratum of the sample, weighted by
+the share of all 6,951 Italian reviews that the stratum holds.

@@ -104,7 +104,7 @@ This table is the single source of numbers for the article. **All languages** fi
 | Store ratings at scraping time / reviews collected | 16,787 / 7,329 (coverage **43.7%**) |
 | Raw → anon → clean (rows × columns) | 7,329 × 10 → 7,329 × 9 → 7,329 × 17 |
 | Language split | Italian 6,951 · unknown 363 · other languages 15 |
-| Topics file / labeled / analysis / top reviews | 6,951 × 18 / 6,951 × 21 / 5,998 × 21 / 65 × 6 |
+| Topics file / labeled / analysis / top reviews | 6,951 × 18 / 6,951 × 21 / 5,998 × 21 / 60 × 6 |
 
 ### Ratings and replies
 
@@ -123,7 +123,7 @@ This table is the single source of numbers for the article. **All languages** fi
 |---|---|
 | Model settings chosen in 05 | `min_cluster_size=30`, `min_df=5` |
 | Topics found by the model | 30 (1,601 [outliers](glossary.md#outlier) reassigned) |
-| Topics after [merging](glossary.md#topic-merge) / final labels | 22 / 13 |
+| Topics after [merging](glossary.md#topic-merge) / final labels | 21 / 12 |
 | Excluded | 9 topics, 953 reviews (**13.7%** of Italian reviews) |
 | Analysis set | 5,998 reviews |
 | Category split | App Issue 5,090 (84.9%) · Praise 740 (12.3%) · Rail Service 87 (1.5%) · App Updates 81 (1.4%) |
@@ -137,11 +137,11 @@ This table is the single source of numbers for the article. **All languages** fi
 | Measure | Value |
 |---|---|
 | Reviews that keep their label with UMAP seeds 0, 1, 2, 3 | 94.6%, 94.1%, 93.6%, 79.1% |
-| Blind coding sample | 196 reviews, 14 per model label |
-| Cohen's kappa, sample | **0.808** (95% CI 0.759 to 0.857) |
-| Raw agreement, sample | 82.1% (95% CI 77.6% to 86.7%) |
-| Weighted agreement, all reviews | **86.4%** (95% CI 81.6% to 90.9%) |
-| Precision per label | from 42.9% (Missing Stations) to 100.0% (four labels) |
+| Blind coding sample | 196 reviews, 14 per stratum: the 13 labels of the time it was drawn and EXCLUDE |
+| Cohen's kappa, sample | **0.812** (95% CI 0.763 to 0.862) |
+| Raw agreement, sample | 82.7% (95% CI 78.1% to 87.2%) |
+| Weighted agreement, all reviews | **86.6%** (95% CI 81.7% to 91.2%) |
+| Precision per label | from 50.0% (App Not Working) to 100.0% (four labels) |
 
 ---
 
@@ -576,7 +576,7 @@ The four comparisons above lead to these decisions for 06 (cell 46):
   keywords.
 - Seed stability is moderate. The ARI against seed 42 goes from 0.515 to 0.885, and the number of topics from 27 to
   33. Seed 42 is not an unusually good seed: its coherence (0.419) is within the range of the other seeds (0.415 to
-  0.434). The ARI measures the 30 topics, not the 13 labels given in 07. Whether the labeled themes stay stable
+  0.434). The ARI measures the 30 topics, not the 12 labels given in 07. Whether the labeled themes stay stable
   across seeds will be measured in notebook 08.
 - The embedding model stays `paraphrase-multilingual-mpnet-base-v2`. MiniLM has lower coherence (0.407 against
   0.419) and lower diversity (0.695 against 0.783), and `multilingual-e5-base` collapses into 7 topics with 95.4% of
@@ -610,7 +610,7 @@ Notebook 08 has since measured the stability of the labeled themes (§10).
 - The seed comparison uses five seeds, and the embedding and keyword comparisons use seed 42 only.
 - The keyword metrics of e5 are missing, because `min_df=5` leaves it no keyword.
 - Seed stability is moderate: the ARI against seed 42 goes from 0.515 to 0.885 and the number of topics from 27 to
-  33. It measures the 30 topics, not the 13 labels. Notebook 08 measures the labels: 93.6% to 94.6% of the
+  33. It measures the 30 topics, not the 12 labels. Notebook 08 measures the labels: 93.6% to 94.6% of the
   reviews keep their label with seeds 0, 1 and 2, and 79.1% with seed 3 (§10).
 - The UMAP and HDBSCAN settings were chosen for the current embedding model, so the embedding comparison favours
   it.
@@ -763,7 +763,7 @@ sets MMR again before merging.
 - The topic tree measures how similar the keywords are, not how similar the opinions are.
 - The topics depend partly on the UMAP seed: in 05 other seeds give 27 to 33 topics, with an ARI of 0.515 to 0.885
   against seed 42 (§7). In 08, 93.6% to 94.6% of the reviews keep their label with seeds 0, 1 and 2, and 79.1%
-  with seed 3, where Subscription Purchase Failures and Login & Account Issues are absorbed by Ticket Purchase
+  with seed 3, where Subscription & Payment Failures and Login & Account Issues are absorbed by Ticket Purchase
   Failures (§10).
 - The embedding model was compared with two others using UMAP and HDBSCAN settings chosen for it, which favours
   it (§7).
@@ -784,7 +784,7 @@ picture, and saves the files used by the dashboard after checking that no person
   - `trenord_reviews_labeled.csv`: adds `topic_label`, `category`, `topic_merged`.
   - `trenord_reviews_analysis.csv`: EXCLUDE rows removed.
   - `top_reviews_per_topic.csv` (`topic_label, category, rating, thumbs_up, date, text`): the 5 most upvoted reviews
-    with at least one upvote, for each of the 13 topics.
+    with at least one upvote, for each of the 12 topics.
   - `bertopic_model_merged/`: the model after the merges.
   - Three charts in `reports/figures/`, saved with `dpi=150`: `chart_reviews_per_topic.png`,
     `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`.
@@ -794,7 +794,7 @@ The categories are the project's own, chosen after reading the topics:
 - **App Issue**: something in the app does not work, works badly or stopped working;
 - **Praise**: what users like about the app;
 - **Rail Service**: complaints about the trains and the company, not about the app;
-- **App Updates**: reviews that compare the app with its earlier versions.
+- **App Updates**: reviews about how the app got better or worse with an update, and how it could improve.
 
 No topic is made mostly of requests for new features: requests exist in the reviews, but they are spread across
 topics.
@@ -830,30 +830,32 @@ has 1,143 reviews, 1.7% short and 88.9% with 1-2 stars.
 
 ### Label map and keyword check
 `TOPIC_LABELS` maps each of the 30 topic ids of the 06 model to `(label, category, identifying keywords)`. The
-label is `EXCLUDE` for the topics set aside, which have no category.
+label is `EXCLUDE` for the topics set aside, which have no category. The comment above each entry says what the
+label covers. Two of them say more than the name: App Not Working also holds generic "it does not work" reviews that
+do not say what fails, and topics 7 and 28 share Station Issues because the two were hard to tell apart.
 
 | Topic | Label | Category | Identifying keywords |
 |---:|---|---|---|
-| 0 | Unreliable Train Status | App Issue | treni, ritardi |
+| 0 | Inaccurate Train Info | App Issue | treni, ritardi |
 | 1 | Ticket Purchase Failures | App Issue | biglietti, errore |
-| 2 | Subscription Purchase Failures | App Issue | pagamento, abbonamenti |
+| 2 | Subscription & Payment Failures | App Issue | pagamento, abbonamenti |
 | 3 | Poor Usability | App Issue | lenta, difficile |
-| 4 | App Crashes & Freezes | App Issue | aggiornamento, android |
+| 4 | App Not Working | App Issue | aggiornamento, android |
 | 5 | Login & Account Issues | App Issue | login, account |
-| 6 | Unreliable Train Status | App Issue | ritardi, ritardi cancellazioni |
-| 7 | Station & Favorites Bugs | App Issue | stazioni, stazioni preferite |
+| 6 | Inaccurate Train Info | App Issue | ritardi, ritardi cancellazioni |
+| 7 | Station Issues | App Issue | stazioni, stazioni preferite |
 | 8 | Ease of Use | Praise | app comoda, app facile |
 | 9 | EXCLUDE | - | ottima applicazione, utilissima |
 | 10 | EXCLUDE | - | ottima, perfetta |
 | 11 | Ease of Use | Praise | facile, intuitivo |
-| 12 | Easy Purchase & Payment | Praise | biglietti, facile |
+| 12 | Easy Purchases | Praise | biglietti, facile |
 | 13 | QR Code Failures | App Issue | codice, metro |
 | 14 | EXCLUDE | - | ottimo, complimenti |
-| 15 | App Crashes & Freezes | App Issue | aggiornamento, bug |
+| 15 | App Not Working | App Issue | aggiornamento, bug |
 | 16 | EXCLUDE | - | funziona funziona, funzionante |
-| 17 | Easy Purchase & Payment | Praise | pagamento, rapido |
-| 18 | Version Comparisons | App Updates | migliorata, migliorare |
-| 19 | Rail Service Complaints | Rail Service | servizio pessimo, azienda |
+| 17 | Easy Purchases | Praise | pagamento, rapido |
+| 18 | Improvement Feedback | App Updates | migliorata, migliorare |
+| 19 | Train Service Complaints | Rail Service | servizio pessimo, azienda |
 | 20 | Ease of Use | Praise | efficiente, rapida |
 | 21 | EXCLUDE | - | dovere, sufficiente |
 | 22 | Login & Account Issues | App Issue | registrare, profilo |
@@ -862,8 +864,8 @@ label is `EXCLUDE` for the topics set aside, which have no category.
 | 25 | EXCLUDE | - | pessima pessima, negativa |
 | 26 | EXCLUDE | - | funziona, impossibile utilizzare |
 | 27 | EXCLUDE | - | pessima pessima, disastrosa |
-| 28 | Missing Stations | App Issue | milano, alcune stazioni |
-| 29 | Unreliable Train Status | App Issue | ritardi, app aggiornata |
+| 28 | Station Issues | App Issue | milano, alcune stazioni |
+| 29 | Inaccurate Train Info | App Issue | ritardi, app aggiornata |
 
 Cell 7 checks that the map has exactly the topics of the model, and that both identifying keywords of every topic
 are still among its top 10 keywords. If the model is retrained and its topics change, some keyword is missing and the
@@ -872,7 +874,7 @@ missing. Two keywords are used because one common word, such as "app", could app
 specific words together are much less likely to survive in a topic that has changed.
 
 Cell 8 then gives every review the label and category of its topic. `map()` looks up each topic number in a
-dictionary and returns its value, so all reviews of topic 6 get "Unreliable Train Status". 13 labels besides
+dictionary and returns its value, so all reviews of topic 6 get "Inaccurate Train Info". 12 labels besides
 EXCLUDE, 5,998 reviews kept and 953 excluded, a share of 13.7%.
 
 ### Merges
@@ -880,36 +882,37 @@ Topics with the same label are merged. The merge list is built from the label ma
 
 | Label | Topics merged |
 |---|---|
-| Unreliable Train Status | 0, 6, 29 |
-| App Crashes & Freezes | 4, 15 |
+| Inaccurate Train Info | 0, 6, 29 |
+| App Not Working | 4, 15 |
 | Login & Account Issues | 5, 22 |
+| Station Issues | 7, 28 |
 | Ease of Use | 8, 11, 20, 24 |
-| Easy Purchase & Payment | 12, 17 |
+| Easy Purchases | 12, 17 |
 
 MMR (`diversity=0.3`) is set again, because the saved model does not keep it, and
 `merge_topics(texts, topics_to_merge)` is called. It changes only the model: its topic of every review, sizes,
 keywords and topic vectors. The labels stay attached to the original 06 ids in `topic`, and the new numbers, which
-BERTopic assigns by size, go in their own column, `topic_merged`. After the merge the model has 22 topics: the 13
-labels plus the 9 excluded topics, which are left as they are. Cell 11 checks that every merged topic holds one label
-and every kept label is one merged topic.
+BERTopic assigns by size, go in their own column, `topic_merged`. After the merge the model has 21 topics: the 12
+labels plus the 9 excluded topics, which are left as they are. Cell 11 checks that every merged topic holds one label,
+that every kept label is one merged topic, and that the number of merged topics is the number of labels plus the
+excluded topics.
 
 ### Final topics
 
 | Label | Category | Topic ids | Reviews | Share | Avg ★ | 95% CI |
 |---|---|---|---:|---:|---:|---|
-| Unreliable Train Status | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 | 1.72-1.84 |
+| Inaccurate Train Info | App Issue | 0, 6, 29 | 1,501 | 25.0% | 1.78 | 1.72-1.84 |
 | Ticket Purchase Failures | App Issue | 1 | 1,143 | 19.1% | 1.41 | 1.36-1.46 |
-| App Crashes & Freezes | App Issue | 4, 15 | 655 | 10.9% | 1.61 | 1.53-1.69 |
-| Subscription Purchase Failures | App Issue | 2 | 641 | 10.7% | 1.44 | 1.37-1.51 |
+| App Not Working | App Issue | 4, 15 | 655 | 10.9% | 1.61 | 1.53-1.69 |
+| Subscription & Payment Failures | App Issue | 2 | 641 | 10.7% | 1.44 | 1.37-1.51 |
 | Poor Usability | App Issue | 3 | 499 | 8.3% | 1.43 | 1.35-1.51 |
 | Ease of Use | Praise | 8, 11, 20, 24 | 463 | 7.7% | 4.54 | 4.45-4.62 |
 | Login & Account Issues | App Issue | 5, 22 | 289 | 4.8% | 1.40 | 1.31-1.49 |
-| Easy Purchase & Payment | Praise | 12, 17 | 277 | 4.6% | 3.98 | 3.82-4.14 |
-| Station & Favorites Bugs | App Issue | 7 | 173 | 2.9% | 1.68 | 1.52-1.85 |
+| Easy Purchases | Praise | 12, 17 | 277 | 4.6% | 3.98 | 3.82-4.14 |
+| Station Issues | App Issue | 7, 28 | 244 | 4.1% | 1.73 | 1.58-1.88 |
 | QR Code Failures | App Issue | 13 | 118 | 2.0% | 1.59 | 1.42-1.76 |
-| Rail Service Complaints | Rail Service | 19 | 87 | 1.5% | 1.17 | 1.02-1.33 |
-| Version Comparisons | App Updates | 18 | 81 | 1.4% | 3.63 | 3.35-3.91 |
-| Missing Stations | App Issue | 28 | 71 | 1.2% | 1.85 | 1.53-2.16 |
+| Train Service Complaints | Rail Service | 19 | 87 | 1.5% | 1.17 | 1.02-1.33 |
+| Improvement Feedback | App Updates | 18 | 81 | 1.4% | 3.63 | 3.35-3.91 |
 
 Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion totals are in Key numbers.
 
@@ -918,23 +921,26 @@ the average rating, `ratings.std() / np.sqrt(n)`, and the 95% margin `t.ppf(0.97
 the [t distribution](glossary.md#t-distribution); the [confidence interval](glossary.md#confidence-interval) is the
 average plus or minus the margin. Ratings are treated as independent. They are ordinal (1 to 5 stars), and the mean
 is used as is common for star ratings. The intervals show that the App Issue averages overlap, while the two Praise
-topics and Version Comparisons are clearly above them.
+topics and Improvement Feedback are clearly above them.
 
 ### Charts and how to read them
 All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
 `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`.
 - **`chart_reviews_per_topic.png`** (cell 13). Horizontal bars, largest topic at the top, with the number of reviews
-  and the share of the analysis set at the end of each bar. App Issue covers 9 of the 13 topics and 84.9% of the
+  and the share of the analysis set at the end of each bar. App Issue covers 8 of the 12 topics and 84.9% of the
   reviews.
 - **`chart_avg_rating_per_topic.png`** (cell 15). A dot for each average with its 95% interval as a horizontal line,
   on the full 1-5 axis, and a dashed line for the average of all analysed reviews (1.93). Dots are used instead of
   bars because a bar suggests a value that starts from zero, while ratings start from 1. A short line means a precise
-  average; Missing Stations (71 reviews) has the longest.
+  average; Improvement Feedback (81 reviews) has the longest.
 - **`chart_keywords_per_topic.png`** (cell 17). One panel per final topic with its top 5 keywords from the merged
-  model. Bar length is the c-TF-IDF weight. It can be compared within a panel, not between panels, so the axis has no
-  numbers. Singular and plural appear as separate words ("biglietti" and "biglietto") because the keywords come from
+  model, in a grid of 4 rows and 3 columns. Bar length is the c-TF-IDF weight. It can be compared within a panel, not
+  between panels, so the axis has no numbers. The legend at the bottom gives the category colours, and its title says
+  what the bar length means. Singular and plural appear as separate words ("biglietti" and "biglietto") because the keywords come from
   the text without lemmatization. The top word of Poor Usability is "funziona", which confirms that topic 3 is
-  borderline.
+  borderline. Station Issues has "stazioni", "stazione" and "milano" at the top, and "stazioni preferite" from
+  topic 7 next to place names from topic 28. The top words of App Not Working are generic ("app", "aggiornamento",
+  "applicazione").
 
 ### Bias checks
 - **Ratings of excluded and analysed reviews** (cell 19). The excluded reviews average 3.66 stars, the analysed ones
@@ -956,16 +962,16 @@ All three use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cat
 | The label map has exactly the 30 topics of the model | PASS |
 | Both identifying keywords of every topic among its top 10 keywords | PASS (0 missing) |
 | No review without a label | PASS |
-| Merged topics | 22; each holds one label, and each kept label is one merged topic |
+| Merged topics | 21 (12 labels and 9 excluded); each holds one label, and each kept label is one merged topic |
 | No `author` column in any output | PASS |
 | `review_id` pseudonymised (12 hex characters) for every row | PASS |
 | Every review found in clean.csv, `reply_text` identical | PASS |
-| 13 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
+| 12 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
 
 ### The two models
 - **`bertopic_model_trained/`** is trained and saved by 06 and read by 07. Its topic ids are the ones the label map refers
   to.
-- **`bertopic_model_merged/`** is saved by 07 after the merges, in the same format. It has 22 topics and the
+- **`bertopic_model_merged/`** is saved by 07 after the merges, in the same format. It has 21 topics and the
   keywords of the merged topics, the ones shown in chart 3. It is kept for reuse, for example to look at the merged
   topics again, and no other step of the pipeline reads it.
 
@@ -984,13 +990,25 @@ Both are local only and gitignored.
 - **Topic 3 kept as Poor Usability.** It is borderline: 51.9% of its reviews have 5 words or fewer, and many are
   generic. It is kept because it is the only topic about clarity, complexity and slowness; excluding it would remove
   that dimension and make the excluded set even more positive.
-- **Missing Stations is an App Issue.** The reviews report stations removed from the app or missing from its list,
-  often after an update: something that worked and stopped working. A few fare and route complaints are mixed in.
-- **Topics 0, 6 and 29 merged into Unreliable Train Status.** All three are about delays and cancellations shown
+- **Topics 7 and 28 merged into Station Issues.** Topic 7 is about favourite stations that get lost and a station
+  search that does not work, topic 28 about stations removed from the app or missing from its list, often after an
+  update. The two were hard to tell apart, so they share one label. Both are App Issues: something that worked and
+  stopped working. A few fare and route complaints are mixed into topic 28.
+- **Topics 0, 6 and 29 merged into Inaccurate Train Info.** All three are about delays and cancellations shown
   late, wrong or not at all.
+- **App Not Working includes generic complaints.** Next to crashes and problems after an update, topics 4 and 15
+  hold reviews that only say the app does not work, without saying what fails. They are kept in the label because
+  they are not separated from the others in the model.
 - **Topic 23 excluded.** Its reviews say "ottima app" and nothing else, while the Ease of Use topics name a specific
   quality.
 - **No category for feature requests.** Requests are scattered across topics and dominate none of them.
+- **Labels renamed on 2026-11-12.** After the blind coding of 08, eight of the 13 labels got a new name, and two
+  of them now share one:
+  Unreliable Train Status became Inaccurate Train Info, Subscription Purchase Failures became Subscription & Payment
+  Failures, App Crashes & Freezes became App Not Working, Station & Favorites Bugs and Missing Stations became
+  Station Issues, Easy Purchase & Payment became Easy Purchases, Rail Service Complaints became Train Service
+  Complaints, and Version Comparisons became Improvement Feedback. The topic ids, the identifying keywords and the
+  categories did not change, so the label of each review changed only in its name, apart from the join.
 - **Text inspection kept out of the notebook.** The manual review notes contain review texts and stay local
   (`labeling/`, gitignored). The notebook prints only counts, aggregates and keywords.
 - **Dots for averages, one palette everywhere.** Ratings start from 1, so averages are dots on a 1-5 axis. The
@@ -1000,7 +1018,9 @@ Both are local only and gitignored.
 ### Known limitations
 - The labels, the categories and the exclusion rule were decided by one person.
 - The exclusion rule was written after reading the topics, not before.
-- The reliability of the labels has not been measured, for example by a second coder on a sample of reviews.
+- The labels were checked against a blind coding of a sample (§10), but by the same person who wrote them, not by
+  a second coder.
+- App Not Working is partly a catch-all for generic complaints: in 08 only 7 of its 14 sampled reviews are confirmed.
 - The analysis set is more negative than the full dataset, and the share excluded changes from year to year.
 - The confidence intervals treat ratings as independent and use the mean of an ordinal scale.
 - Poor Usability includes many short, generic complaints.
@@ -1009,10 +1029,14 @@ Both are local only and gitignored.
 
 ## 10. Notebook 08 - Label validation
 
-08 checks the 13 labels of 07 in three parts. Part 1 trains the model of 06 again with other UMAP seeds and
+08 checks the 12 labels of 07 in three parts. Part 1 trains the model of 06 again with other UMAP seeds and
 measures how many reviews keep their label. Part 2 draws a sample of reviews for
 [blind coding](glossary.md#blind-coding) by hand. Part 3 compares my coding of the sample with the model labels. It
 changes no label and writes nothing in `data/processed/`.
+
+The sample was drawn and coded when 07 still had 13 labels. Eight of them were renamed afterwards, two of them into
+the same name, Station Issues (§9). My coding, the codebook and the key keep the names of that time, and 08 maps them to the
+current names in code, without editing the files in `labeling/`.
 
 ### Input and output
 - Input: `trenord_reviews_clean.csv`, filtered to `language == "it"`, with `text_clean` as in 06, and
@@ -1035,18 +1059,23 @@ changes no label and writes nothing in `data/processed/`.
 4. Check that seed 42 gives every review the topic saved in `trenord_reviews_labeled.csv` (cell 8).
 5. Give each topic of the other seeds the current label of most of its reviews, measure the share of reviews that
    keep their label, and show where the reviews of the lost labels go (cells 10-12).
-6. Write the codebook (cell 15), draw a [stratified sample](glossary.md#stratified-sample) (cell 16), shuffle it
-   (cell 17), write the two files (cell 18) and read them back (cell 19).
-7. Load my coding and check it: 196 rows, every `my_label` filled, only the 15 labels of the codebook. A failed
-   check raises an error that names only the `sample_id` of the wrong rows (cell 23). Join it with the key on
-   `sample_id` (cell 24).
-8. Compute the raw agreement and [Cohen's kappa](glossary.md#cohens-kappa) on the sample (cell 26), and the
-   weighted agreement on all reviews (cell 28).
-9. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 30-31).
-10. Compute the [precision](glossary.md#precision) of each label (cell 33), the
-    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 35-36) and the five most frequent
-    disagreements (cell 37).
-11. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 39).
+6. Rebuild the strata the sample was drawn from (cell 15): the renamed labels go back to their old name, and
+   Station Issues is split again by its 06 topic, 7 for Station & Favorites Bugs and 28 for Missing Stations. Every
+   stratum must map back to the current label of its review.
+7. Write the codebook (cell 16), draw a [stratified sample](glossary.md#stratified-sample) (cell 17), shuffle it
+   (cell 18), write the two files (cell 19) and read them back (cell 20).
+8. Load my coding and check it: 196 rows, every `my_label` filled, only the 15 labels of the codebook. A failed
+   check raises an error that names only the `sample_id` of the wrong rows (cell 24). Join it with the key on
+   `sample_id` (cell 25).
+9. Map my labels and the key's labels to the current names with `NEW_LABEL_NAMES`, and keep the key's label as the
+   stratum of the review (cell 27).
+10. Compute the raw agreement and [Cohen's kappa](glossary.md#cohens-kappa) on the sample (cell 29), and the
+    weighted agreement on all reviews (cell 31).
+11. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 33-34).
+12. Compute the [precision](glossary.md#precision) of each label (cell 36), the
+    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 38-39) and the five most frequent
+    disagreements (cell 40).
+13. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 42).
 
 ### Parameters
 | Parameter | Value |
@@ -1055,6 +1084,8 @@ changes no label and writes nothing in `data/processed/`.
 | Model settings | as in 06: UMAP `n_neighbors=15`, `n_components=5`, `min_dist=0.0`, `metric="cosine"`; HDBSCAN `min_cluster_size=30`; `min_df=5`; MMR `diversity=0.3`; outliers reduced with `strategy="embeddings"`, `threshold=0.0` |
 | `SAMPLE_PER_LABEL` | 14 |
 | `SAMPLE_SEED` | 42, for the sample and for its order |
+| `NEW_LABEL_NAMES` | the 8 old label names that changed, each with its current name |
+| `STATION_STRATUM_BY_TOPIC` | `{7: "Station & Favorites Bugs", 28: "Missing Stations"}` |
 | `BOOTSTRAP_RESAMPLES` | 2000 |
 | `BOOTSTRAP_SEED` | 42, for `np.random.default_rng` |
 
@@ -1062,69 +1093,71 @@ changes no label and writes nothing in `data/processed/`.
 | Seed | Topics | Outliers before reduction | Labels that are the majority in at least one topic |
 |---|---|---|---|
 | 42 | 30 | 1,601 | - |
-| 0 | 33 | 2,023 | 14 of 14 |
-| 1 | 27 | 1,264 | 14 of 14 |
-| 2 | 31 | 1,564 | 14 of 14 |
-| 3 | 27 | 984 | 12 of 14 |
+| 0 | 33 | 2,023 | 13 of 13 |
+| 1 | 27 | 1,264 | 13 of 13 |
+| 2 | 31 | 1,564 | 13 of 13 |
+| 3 | 27 | 984 | 11 of 13 |
 
-Seed 42 gives every review the topic of `trenord_reviews_labeled.csv`: 0 of 6,951 reviews differ (cell 8). No
-topic of the other seeds has a tie between two labels.
+The labels are the 12 of 07 plus EXCLUDE. Seed 42 gives every review the topic of `trenord_reviews_labeled.csv`:
+0 of 6,951 reviews differ (cell 8). No topic of the other seeds has a tie between two labels.
 
 ### Stability of the labeled themes
 The topics of a new seed have new numbers, so they cannot be matched to the old ones by number. Each new topic
-gets the current label (one of the 13, or EXCLUDE) that most of its reviews have now. A review keeps its label if
+gets the current label (one of the 12, or EXCLUDE) that most of its reviews have now. A review keeps its label if
 its new topic carries the label it has now. The table gives, for each label, the share of its reviews that keep
 it, and in the last row the share of all reviews (cell 11).
 
-A made-up example: a new topic has 100 reviews, 70 now labeled Ticket Purchase Failures, 20 Subscription Purchase
+A made-up example: a new topic has 100 reviews, 70 now labeled Ticket Purchase Failures, 20 Subscription & Payment
 Failures and 10 EXCLUDE. It gets Ticket Purchase Failures; the 70 keep their label and the other 30 do not. A
 label that is the majority in no new topic keeps 0%.
 
 | Label | Reviews | Seed 0 | Seed 1 | Seed 2 | Seed 3 |
 |---|---|---|---|---|---|
-| Unreliable Train Status | 1,501 | 98.6% | 97.1% | 95.5% | 93.5% |
+| Inaccurate Train Info | 1,501 | 98.6% | 97.1% | 95.5% | 93.5% |
 | Ticket Purchase Failures | 1,143 | 93.8% | 97.8% | 98.4% | 99.4% |
 | EXCLUDE | 953 | 96.2% | 81.3% | 86.6% | 82.9% |
-| App Crashes & Freezes | 655 | 91.3% | 92.4% | 88.2% | 83.7% |
-| Subscription Purchase Failures | 641 | 95.6% | 98.3% | 94.4% | 0.0% |
+| App Not Working | 655 | 91.3% | 92.4% | 88.2% | 83.7% |
+| Subscription & Payment Failures | 641 | 95.6% | 98.3% | 94.4% | 0.0% |
 | Poor Usability | 499 | 86.6% | 97.4% | 98.2% | 96.6% |
 | Ease of Use | 463 | 96.3% | 96.5% | 98.3% | 95.0% |
 | Login & Account Issues | 289 | 94.1% | 95.2% | 91.0% | 0.0% |
-| Easy Purchase & Payment | 277 | 94.2% | 93.1% | 89.9% | 82.3% |
-| Station & Favorites Bugs | 173 | 89.6% | 91.9% | 92.5% | 90.2% |
+| Easy Purchases | 277 | 94.2% | 93.1% | 89.9% | 82.3% |
+| Station Issues | 244 | 89.3% | 93.4% | 92.2% | 88.1% |
 | QR Code Failures | 118 | 95.8% | 98.3% | 97.5% | 93.2% |
-| Rail Service Complaints | 87 | 88.5% | 82.8% | 86.2% | 79.3% |
-| Version Comparisons | 81 | 95.1% | 93.8% | 86.4% | 96.3% |
-| Missing Stations | 71 | 88.7% | 97.2% | 91.5% | 81.7% |
+| Train Service Complaints | 87 | 88.5% | 82.8% | 86.2% | 79.3% |
+| Improvement Feedback | 81 | 95.1% | 93.8% | 86.4% | 96.3% |
 | Overall | 6,951 | 94.6% | 94.1% | 93.6% | 79.1% |
 
 - With seeds 0, 1 and 2, 93.6% to 94.6% of the reviews keep their label, and every label keeps at least 81.3%.
-- With seed 3, 79.1%. Subscription Purchase Failures and Login & Account Issues are the majority in no topic:
+- With seed 3, 79.1%. Subscription & Payment Failures and Login & Account Issues are the majority in no topic:
   98.8% of the subscription reviews and 96.9% of the login reviews end up in topics where Ticket Purchase Failures
   is the majority (cell 12). Seed 3 is also the seed with the lowest ARI against seed 42 in 05 (0.515, §7).
-- The two largest labels are the most stable: Unreliable Train Status keeps 93.5% to 98.6%, Ticket Purchase
+- The two largest labels are the most stable: Inaccurate Train Info keeps 93.5% to 98.6%, Ticket Purchase
   Failures 93.8% to 99.4%.
-- Among the labels that never disappear, EXCLUDE (81.3% to 96.2%) and Rail Service Complaints (79.3% to 88.5%)
+- Station Issues, which joins two topics of 06, keeps 88.1% to 93.4%.
+- Among the labels that never disappear, EXCLUDE (81.3% to 96.2%) and Train Service Complaints (79.3% to 88.5%)
   move the most.
 
 Most themes come back with every seed. The split between ticket, subscription and login problems depends on the
 seed: in one seed out of four it is gone.
 
 ### The blind coding sample
-- 14 reviews from each of the 13 labels and 14 from EXCLUDE, 196 in total, drawn with `random_state=42` (cell 16).
+- 14 reviews from each of the 14 strata, 196 in total, drawn with `random_state=42` (cell 17). The strata are the
+  13 labels of the time the sample was drawn and EXCLUDE, rebuilt in cell 15. Station Issues is two strata, Station &
+  Favorites Bugs and Missing Stations, so it has 28 reviews in the sample and every other label 14.
 - The rows are shuffled with the same seed, and `sample_id` (1 to 196) is given after the shuffle, so neither the
-  order nor the id says anything about the label. The longest run of the same label in a row is 2 (cell 17). No
+  order nor the id says anything about the label. The longest run of the same stratum in a row is 2 (cell 18). No
   review in the sample has an empty text.
 - `validation_sample.xlsx` has two sheets:
   - `coding`: `sample_id`, `text` (the review as written, not `text_clean`, because a person reads it) and an empty
     `my_label` column with a dropdown;
-  - `codebook`: one row per label with its category and a one-line definition taken from the comments of the label
-    map in 07, plus EXCLUDE (short generic verdict with no specific content) and "None of these" (the review fits no
-    label). 15 rows.
+  - `codebook`: one row per label of that time with its category and a one-line definition taken from the comments
+    of the label map in 07, plus EXCLUDE (short generic verdict with no specific content) and "None of these" (the
+    review fits no label). 15 rows, with the old names.
 - The dropdown reads its values from the label column of the codebook sheet. A list written inside the rule would
   pass the 255 characters Excel allows.
 - `validation_key.csv` holds `sample_id` and `model_label`: the hidden key, not opened before the coding is done.
-- Cell 19 reads both files back and prints only counts: 196 rows in the coding sheet, 15 in the codebook, 196 in
+- Cell 20 reads both files back and prints only counts: 196 rows in the coding sheet, 15 in the codebook, 196 in
   the key, the same texts and ids as the sample, 14 reviews for each of the 14 labels in the key.
 
 #### Why blind
@@ -1134,113 +1167,134 @@ file, my label is given from the text and the codebook only.
 
 #### Why stratified
 
-A simple random sample of 196 would follow the label sizes: mostly Unreliable Train Status and
-Ticket Purchase Failures, and one or two reviews from Missing Stations (71 reviews) or Version Comparisons (81).
-That is too few to say anything about the small labels. With 14 from each, every label can be checked.
+A simple random sample of 196 would follow the label sizes: mostly Inaccurate Train Info and
+Ticket Purchase Failures, and one or two reviews from the smallest strata, Missing Stations (71 reviews, now part of
+Station Issues) or Improvement Feedback (81). That is too few to say anything about the small labels. With 14 from
+each stratum, every label can be checked.
 
 #### Why a weighted agreement is needed
 
-In the sample every label has
+In the sample every stratum has
 the same weight, 14 of 196, while in the data the sizes go from 71 to 1,501 reviews. The plain share of matches in
-the sample therefore over-weights the small labels. To estimate the agreement over all reviews, the agreement of each
-label is weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy), called weighted
+the sample therefore over-weights the small strata. To estimate the agreement over all reviews, the agreement of each
+stratum is weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy), called weighted
 agreement in 08). A made-up example with two labels: label A holds 90% of the
 reviews and is right 9 times out of 10 in the sample, label B holds 10% and is right 5 times out of 10. The plain
 share of matches is 14 of 20, 70%; the weighted accuracy is 0.9 x 90% + 0.1 x 50% = 86%.
 
 ### Agreement between my coding and the model
-I coded the 196 reviews in `validation_sample.xlsx` without opening the key. Cell 23 found 196 rows, no empty label,
-no label outside the codebook, and 15 of the 15 labels used. Cell 24 joined all 196 rows with the key.
+I coded the 196 reviews in `validation_sample.xlsx` without opening the key. Cell 24 found 196 rows, no empty label,
+no label outside the codebook, and 15 of the 15 labels used. Cell 25 joined all 196 rows with the key.
+
+Cell 27 maps my labels and the key's labels to the current names; the two station labels both become Station
+Issues. The key's label of that time is kept in its own column as the stratum of the review. As a check, the mapped
+model label of every review equals its label in `trenord_reviews_labeled.csv` (0 different). After the mapping I
+used 14 labels, the model 13, and the reviews come from 14 strata.
 
 The raw agreement is the share of reviews where my label equals the model label. Cohen's kappa corrects it for the
-agreement expected by chance, given how often each of us used each label. Both use the 15 labels used by either of
+agreement expected by chance, given how often each of us used each label. Both use the 14 labels used by either of
 us, None of these included; the model never gives None of these, so those reviews count as disagreements.
 
-The weighted agreement first computes the share of agreement inside each model label (its precision), then
-averages the 14 shares weighting each label by its number of reviews in `trenord_reviews_labeled.csv`, EXCLUDE
-included. Each label then weighs as much as it does in the data, so the result estimates the agreement on a review
-drawn at random from all 6,951.
+The weighted agreement first computes the share of agreement inside each stratum, then averages the 14 shares
+weighting each stratum by its number of reviews in `trenord_reviews_labeled.csv`, EXCLUDE included. Station Issues
+counts as its two strata, each with its own size. Each stratum then weighs as much as it does in the data, so the
+result estimates the agreement on a review drawn at random from all 6,951.
 
-The intervals come from one bootstrap loop (cell 30): 2,000 resamples, each drawn as the sample was, 14 reviews with
-replacement inside each model label, with `np.random.default_rng(42)`. The kappa of each resample uses the same 15
+The intervals come from one bootstrap loop (cell 33): 2,000 resamples, each drawn as the sample was, 14 reviews with
+replacement inside each stratum, with `np.random.default_rng(42)`. The kappa of each resample uses the same 14
 labels. The weights stay fixed, because they come from all reviews. The 95% interval is the 2.5th to 97.5th
 percentile of the 2,000 values.
 
 | Measure | Describes | Value | 95% CI |
 |---|---|---|---|
-| Reviews with the same label | sample | 161 of 196 | - |
-| Raw agreement | sample | 82.1% | 77.6% to 86.7% |
-| Cohen's kappa | sample | 0.808 | 0.759 to 0.857 |
-| Weighted agreement | all 6,951 reviews | 86.4% | 81.6% to 90.9% |
+| Reviews with the same label | sample | 162 of 196 | - |
+| Raw agreement | sample | 82.7% | 78.1% to 87.2% |
+| Cohen's kappa | sample | 0.812 | 0.763 to 0.862 |
+| Weighted agreement | all 6,951 reviews | 86.6% | 81.7% to 91.2% |
 
-The precision of a label is the share of the 14 reviews the model put in it to which I gave the same label (cell 33).
+The precision of a label is the share of the sampled reviews the model put in it to which I gave the same label
+(cell 36). For 11 labels and EXCLUDE the label is one stratum, and the precision is the simple share of its 14
+reviews. Station Issues is two strata with very different sizes, 173 and 71 reviews. A simple share of its 28 reviews
+would give the smaller one too much weight, so its precision is the share inside each stratum, weighted by the
+number of reviews of that stratum in `trenord_reviews_labeled.csv`. The column "Confirmed" is a plain count for
+every label.
 
 | Label | Sampled reviews | Confirmed | Precision |
 |---|---|---|---|
-| Unreliable Train Status | 14 | 14 | 100.0% |
+| Inaccurate Train Info | 14 | 14 | 100.0% |
 | Ticket Purchase Failures | 14 | 12 | 85.7% |
 | EXCLUDE | 14 | 13 | 92.9% |
-| App Crashes & Freezes | 14 | 7 | 50.0% |
-| Subscription Purchase Failures | 14 | 14 | 100.0% |
+| App Not Working | 14 | 7 | 50.0% |
+| Subscription & Payment Failures | 14 | 14 | 100.0% |
 | Poor Usability | 14 | 10 | 71.4% |
 | Ease of Use | 14 | 13 | 92.9% |
 | Login & Account Issues | 14 | 13 | 92.9% |
-| Easy Purchase & Payment | 14 | 9 | 64.3% |
-| Station & Favorites Bugs | 14 | 12 | 85.7% |
+| Easy Purchases | 14 | 9 | 64.3% |
+| Station Issues | 28 | 19 | 78.3% |
 | QR Code Failures | 14 | 14 | 100.0% |
-| Rail Service Complaints | 14 | 10 | 71.4% |
-| Version Comparisons | 14 | 14 | 100.0% |
-| Missing Stations | 14 | 6 | 42.9% |
+| Train Service Complaints | 14 | 10 | 71.4% |
+| Improvement Feedback | 14 | 14 | 100.0% |
 
 #### Confusion matrix
 
 ![Confusion matrix of my labels and the model labels](../reports/figures/chart_label_confusion.png)
 
-`chart_label_confusion.png` (cell 36): my labels in the rows, the model labels in the columns, both in the order of
-the stability table, with None of these as the last row. Each cell counts the sampled reviews with that pair of
-labels; empty cells are 0. The diagonal holds the 161 agreements; every cell off the diagonal is a disagreement.
-The colour goes from white to dark blue as the count grows. Each column adds up to 14.
+`chart_label_confusion.png` (cell 39): my labels in the rows, the model labels in the columns, both in the order of
+the stability table and with the current names, with None of these as the last row: 14 rows and 13 columns. Each
+cell counts the sampled reviews with that pair of labels; empty cells are 0. The diagonal holds the 162 agreements;
+every cell off the diagonal is a disagreement. The colour goes from white to dark blue as the count grows. Each
+column adds up to 14, except Station Issues, which adds up to 28.
 
 | My label → model label | Reviews |
 |---|---|
-| EXCLUDE → App Crashes & Freezes | 6 |
-| EXCLUDE → Missing Stations | 3 |
-| Ticket Purchase Failures → Missing Stations | 2 |
+| EXCLUDE → App Not Working | 6 |
+| EXCLUDE → Station Issues | 4 |
+| Ticket Purchase Failures → Station Issues | 2 |
 | EXCLUDE → Poor Usability | 2 |
-| Poor Usability → Rail Service Complaints | 2 |
+| Poor Usability → Train Service Complaints | 2 |
 
-The 35 disagreements fall in 24 pairs of labels. The table shows the five most frequent; a sixth pair, None of these
-→ Easy Purchase & Payment, also has 2 reviews and is left out only by the order of the table (cell 37). 13
-disagreements are reviews I coded EXCLUDE and 5 are reviews I coded None of these.
+The 34 disagreements fall in 22 pairs of labels. The table shows the five most frequent; a sixth pair, None of these
+→ Easy Purchases, also has 2 reviews and is left out only by the order of the table (cell 40). 13 disagreements are
+reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 
 #### Reading the agreement
-- The kappa, 0.808 (0.759 to 0.857), sits on the border between "substantial" (0.61 to 0.80) and "almost perfect"
-  (0.81 to 1.00) on the [Landis and Koch](glossary.md#landis-and-koch-scale) (1977) scale, and its interval covers
-  both bands. The scale is a convention, with bands chosen by judgment, not a test.
-- The raw agreement and the kappa describe the 196 sampled reviews, where each model label weighs the same. The
+- The kappa, 0.812 (0.763 to 0.862), falls in the "almost perfect" band (0.81 to 1.00) of the
+  [Landis and Koch](glossary.md#landis-and-koch-scale) (1977) scale, just above its lower edge, and its interval
+  reaches down into "substantial" (0.61 to 0.80). The scale is a convention, with bands chosen by judgment, not a
+  test.
+- The raw agreement and the kappa describe the 196 sampled reviews, where each of the 14 strata weighs the same. The
   weighted agreement estimates the agreement on all 6,951 reviews. It is higher because most reviews are in labels
-  with a high precision: Unreliable Train Status 100.0%, Ticket Purchase Failures 85.7%, EXCLUDE 92.9%. The lowest,
-  Missing Stations with 42.9%, holds 71 reviews.
-- 13 of the 35 disagreements are reviews I coded EXCLUDE while the model gave them a specific label. The largest
-  pair is EXCLUDE → App Crashes & Freezes, with 6 reviews, so only 7 of the 14 App Crashes & Freezes reviews are
-  confirmed. Most disagreements are about the line between a generic verdict and a specific problem.
-- Missing Stations is the most mixed label: 6 of its 14 reviews are confirmed, and the other 8 go to five different
-  labels, 3 of them to EXCLUDE and 2 to Ticket Purchase Failures.
-- `validation_disagreements.csv` (cell 39) holds the 35 disagreements with `sample_id`, text, my label and model
+  with a high precision: Inaccurate Train Info 100.0%, Ticket Purchase Failures 85.7%, EXCLUDE 92.9%. The lowest
+  precision, App Not Working with 50.0%, is a large label (655 reviews), so it pulls the weighted number down.
+- 13 of the 34 disagreements are reviews I coded EXCLUDE while the model gave them a specific label. The largest
+  pair is EXCLUDE → App Not Working, with 6 reviews, so only 7 of the 14 App Not Working reviews are confirmed. This
+  fits what the label holds: next to crashes and update problems, generic "it does not work" reviews that I coded as
+  verdicts. Most disagreements are about the line between a generic verdict and a specific problem.
+- Station Issues joins two topics that were hard to tell apart. Every review I coded as a station issue is a station
+  issue for the model too, and 19 of its 28 sampled reviews are confirmed; the other 9 go to five different labels,
+  4 of them to EXCLUDE and 2 to Ticket Purchase Failures. Its precision, weighted over its two strata, is 78.3%.
+- `validation_disagreements.csv` (cell 42) holds the 34 disagreements with `sample_id`, text, my label and model
   label, to study them. It is not published.
 
 ### Design decisions
 - The training function is written in 08, not imported from 05: notebooks do not import each other, and 08
   needs only the seed as a parameter.
-- The ARI of 05 compares the 30 topics. The results are reported on the 13 labels, so 08
+- The ARI of 05 compares the 30 topics. The results are reported on the 12 labels, so 08
   measures whether the labels come back.
 - Each new topic takes the majority label of its reviews. This needs no reading of the new topics, so it can be repeated for every seed.
 - The two files are written only once. The Excel file holds my coding, so it is never overwritten. If the data changed, cell
-  19 would show `Same texts as the sample: False`.
+  20 would show `Same texts as the sample: False`.
+- The renamed labels are mapped in code, not in the files. My coding stays as I did it, with the names of that
+  time, and the mapping is written once, in `NEW_LABEL_NAMES`.
+- The strata stay those of the sample: 13 labels of that time and EXCLUDE. The sample was drawn that way, so the
+  weights and the bootstrap use them. They are rebuilt from the current label and, for Station Issues, from the 06
+  topic, which is the only way to tell its two strata apart.
+- The precision of Station Issues is weighted by the size of its two strata, as the weighted agreement is. A simple
+  share of its 28 reviews would treat the 71 reviews of topic 28 as if they were as many as the 173 of topic 7.
 - Kappa uses every label used by either of us, None of these included. Leaving None of these out would drop 5
   reviews that the model did label, and make the agreement look higher.
-- The bootstrap resamples inside each model label, 14 per label, because the sample was drawn that way. A resample
-  of 196 from the whole sample would let the number of reviews per label vary, which the real sample never does.
+- The bootstrap resamples inside each stratum, 14 per stratum, because the sample was drawn that way. A resample
+  of 196 from the whole sample would let the number of reviews per stratum vary, which the real sample never does.
 - The disagreements file is written again on every run: it is computed from the other two files and holds no work
   of its own.
 - Two warnings print a local path, so cell 2 hides them with `warnings.filterwarnings`, before the imports: tqdm
@@ -1250,11 +1304,18 @@ disagreements are reviews I coded EXCLUDE and 5 are reviews I coded None of thes
 ### Validation
 - Rerun of 2026-11-05 in a fresh kernel, 406 s. The two files were created in that run and read back as above.
 - Rerun of 2026-11-12 in a fresh kernel with the `venv_trenord` kernel, 395 s, after part 3 was added:
-  - seed 42 gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews, and the outputs of cells 7
-    to 17, the stability table included, are identical to the previous run;
-  - `validation_sample.xlsx` and `validation_key.csv` were not written again: cell 18 printed that the Excel file
-    already exists, and both files have the same SHA-256 hash before and after the run;
-  - cell 19 reads 196 coded reviews, and the checks of cell 23 pass.
+  - seed 42 gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews, and the outputs of part 1
+    and part 2, the stability table included, are identical to the previous run;
+  - `validation_sample.xlsx` and `validation_key.csv` were not written again: the notebook printed that the Excel
+    file already exists, and both files have the same SHA-256 hash before and after the run;
+  - the notebook reads 196 coded reviews, and the checks of the coding pass.
+- Rerun of 2026-11-12 in a fresh kernel with the `venv_trenord` kernel, 313 s, after the labels of 07 were renamed
+  and two joined:
+  - seed 42 still gives the same topic as `trenord_reviews_labeled.csv` for all 6,951 reviews (0 differ);
+  - every stratum maps back to the current label of its review (cell 15, 0 mismatches), and the sample is the same
+    as before (cell 20, same texts and ids);
+  - `validation_sample.xlsx` and `validation_key.csv` have the same SHA-256 hash before and after the run;
+  - the labels that were only renamed keep the same stability shares as in the previous run.
 - A first attempt with the kernel named `python3` started the system Python instead of the venv, and seed 42 gave
   different topics. The notebook must run in the `venv_trenord` kernel, the environment of the lock file.
 - `labeling/` is gitignored, and none of its files is tracked or staged.
@@ -1272,7 +1333,10 @@ disagreements are reviews I coded EXCLUDE and 5 are reviews I coded None of thes
   keywords and many reviews of each topic.
 - The confidence intervals describe sampling uncertainty only. They do not include the uncertainty of my judgment
   or of the codebook definitions.
-- 14 reviews per label give only a rough precision for each label, because each review counts for 1 in 14.
+- 14 reviews per stratum give only a rough precision for each label, because each review counts for 1 in 14.
+- The labels were renamed, and the two station labels joined, after I had coded the sample and seen the
+  disagreements. Joining them turned one disagreement into an agreement, so the comparison is not fully independent
+  of the labels it checks.
 - The sample is drawn by model label, so it measures precision. How many reviews of a theme the model put in another
   label (the recall) is not measured.
 
@@ -1351,7 +1415,7 @@ Streamlit accepts only named colours there, so these are the closest to the cate
 star ratings use the same 1-5 scale as notebook 04, and the main line colour is the same blue `#0072B2`.
 
 ### Key Findings at this snapshot
-- **Top app issue:** Unreliable Train Status (1,501 reviews, 1.78★).
+- **Top app issue:** Inaccurate Train Info (1,501 reviews, 1.78★).
 - **Average rating:** fell from 3.54★ (2015) to 1.52★ (2025).
 - **Reply rate:** peaked at 100% (2016); 2% in 2025.
 - **Largest Praise topic:** Ease of Use (463 reviews, 4.54★).
@@ -1369,10 +1433,10 @@ star ratings use the same 1-5 scale as notebook 04, and the main line colour is 
   colours and category styles.
 
 ### Validation
-A [smoke test](glossary.md#smoke-test) with `streamlit.testing.v1.AppTest` ran 18 scenarios with no exceptions and
+A [smoke test](glossary.md#smoke-test) with `streamlit.testing.v1.AppTest` ran 17 scenarios with no exceptions and
 all 4 tabs rendered:
 - default filters;
-- each of the 13 Deep Dive topics;
+- each of the 12 Deep Dive topics;
 - zero rows (2015, 1★, App Updates);
 - only the incomplete year 2026;
 - Praise only (no App Issue topics);
@@ -1435,6 +1499,11 @@ their titles.
 its colours changed. 06 gave the same topic for every review, the same sizes and the same keywords. The three
 CSVs of 07 were identical to the previous commit. The six charts of 04 changed only in their colours.
 
+**Rerun of 2026-11-12.** 07 and 08 were rerun in a fresh kernel after eight labels were renamed, two of them into
+the same name, Station Issues (§9). In the labeled and analysis CSVs only `topic_label` and `topic_merged` changed;
+every other column is identical to the previous commit. The three charts of 07 and the confusion matrix of 08 were
+drawn again with the new labels.
+
 **Deterministic steps.**
 - 02, given the same raw file and key.
 - 03, for fixed library versions.
@@ -1485,7 +1554,7 @@ published `review_id` comes from the new key. Ids published before the rotation 
 **Notebook outputs.** The notebooks print only counts, aggregates, keywords and, in 02, a preview of non-text
 columns. A scan of all saved outputs after the 2026-11-04 rerun found no key, review or reply text (also as
 tokens), author name or local path. The same scan of 08, on 2026-11-05 and again on 2026-11-12 after part 3 was
-added, found none either.
+added, found none either, and so did a scan of 07 and 08 after the labels were renamed on 2026-11-12.
 
 ---
 
@@ -1530,9 +1599,9 @@ All Italian reviews: 6,951 rows, 21 columns, one row per review.
 | `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
 | `text_lemmatized` | string | Lemmas without stopwords (§5), used by the dashboard's Words tab. Empty when no token survives (49 rows). | - |
 | `topic` | int | Topic id of the 06 BERTopic model, 0-29 (§8). | `0`, `2`, `22` |
-| `topic_label` | string | One of the 13 topic labels, or `EXCLUDE` for topics without specific content (§9). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
+| `topic_label` | string | One of the 12 topic labels, or `EXCLUDE` for topics without specific content (§9). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
 | `category` | string | Category of the label: `App Issue`, `Praise`, `Rail Service` or `App Updates` (§9). Empty for `EXCLUDE` rows (953 rows). | `App Issue`, `Praise`, `Rail Service` |
-| `topic_merged` | int | Topic id after the merges in 07, 0-21, renumbered by size. Not stable across retrainings; use `topic_label`. | `0`, `1`, `12` |
+| `topic_merged` | int | Topic id after the merges in 07, 0-20, renumbered by size. Not stable across retrainings; use `topic_label`. | `0`, `1`, `12` |
 
 ### `trenord_reviews_analysis.csv`
 
@@ -1559,19 +1628,19 @@ This is the main file of the dashboard.
 | `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
 | `text_lemmatized` | string | Lemmas without stopwords. Empty when no token survives (9 rows). | - |
 | `topic` | int | Topic id of the 06 model; the 21 ids kept by the label map (§9). | `0`, `2`, `22` |
-| `topic_label` | string | One of the 13 topic labels; never `EXCLUDE`. | `Unreliable Train Status`, `Subscription Purchase Failures` |
+| `topic_label` | string | One of the 12 topic labels; never `EXCLUDE`. | `Inaccurate Train Info`, `Subscription & Payment Failures` |
 | `category` | string | `App Issue`, `Praise`, `Rail Service` or `App Updates`. Never empty. | `App Issue`, `Praise`, `App Updates` |
-| `topic_merged` | int | Post-merge topic id; 13 distinct values in 0-20, one per label. | `0`, `1`, `12` |
+| `topic_merged` | int | Post-merge topic id; 12 distinct values in 0-17, one per label. | `0`, `1`, `12` |
 
 ### `top_reviews_per_topic.csv`
 
-The 5 most upvoted reviews with at least one upvote for each of the 13 topics, shown in Deep Dive: 65 rows,
+The 5 most upvoted reviews with at least one upvote for each of the 12 topics, shown in Deep Dive: 60 rows,
 6 columns.
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
-| `topic_label` | string | Topic label, 5 rows each. | `App Crashes & Freezes`, `Login & Account Issues` |
-| `category` | string | Category of the topic: `App Issue` (45 rows), `Praise` (10), `Rail Service` (5) or `App Updates` (5). | `App Issue`, `Praise` |
+| `topic_label` | string | Topic label, 5 rows each. | `App Not Working`, `Login & Account Issues` |
+| `category` | string | Category of the topic: `App Issue` (40 rows), `Praise` (10), `Rail Service` (5) or `App Updates` (5). | `App Issue`, `Praise` |
 | `rating` | int | Star rating, 1-5. | `1`, `3`, `5` |
 | `thumbs_up` | int | Helpful votes, 1-87; the ranking key within each topic. | `23`, `53`, `64` |
 | `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`. | `2021-09-15 06:12:06`, `2023-07-02 17:12:43` |
