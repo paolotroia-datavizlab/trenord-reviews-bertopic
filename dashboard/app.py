@@ -1,8 +1,8 @@
 # dashboard/app.py
 #
 # One scrolling page about the Google Play reviews of the Trenord app.
-# The page goes from the most important message to the details: header, four key numbers,
-# what users complain about, how things changed over time, a topic explorer and a short
+# The page goes from the most important message to the details: header, three key numbers,
+# what users write about, how things changed over time, a topic explorer and a short
 # note on the method. Every number is computed here from the files in data/processed,
 # so nothing has to be updated by hand when the data changes.
 #
@@ -188,8 +188,8 @@ def yearly_numbers(reviews, last_complete_year):
 
 
 def topic_numbers(reviews):
-    """One row per topic: reviews, share of the topic reviews, average rating with its interval
-    and reply rate. Sorted from the largest topic to the smallest."""
+    """One row per topic: reviews, share of the topic reviews and average rating with its
+    interval. Sorted from the largest topic to the smallest."""
     rows = []
     for label, label_reviews in reviews.groupby("topic_label"):
         mean, low, high = mean_with_interval(label_reviews["rating"])
@@ -201,7 +201,6 @@ def topic_numbers(reviews):
             "avg_rating": mean,
             "ci_low": low,
             "ci_high": high,
-            "reply_rate": label_reviews["has_reply"].mean() * 100,
         })
     table = pd.DataFrame(rows)
     return table.sort_values("reviews", ascending=False).reset_index(drop=True)
@@ -221,8 +220,6 @@ def format_stars(value):
 
 
 last_complete_year = find_last_complete_year(all_reviews)
-first_data_year = int(all_reviews["year"].min())
-last_data_year = int(all_reviews["year"].max())
 # Month and year of the first and the last review, for the subtitle. month_name() gives the
 # month in English whatever the language of the computer.
 first_review_date = all_reviews["date"].min()
@@ -391,13 +388,15 @@ def trend_chart(trend_years, incomplete_years, partial_year_text):
     partial_year_text names the partial year in the legend, for example "Jan-Aug 2026"."""
     fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.12,
-        subplot_titles=["Average rating per year", "Reviews with a reply from the developer, per year"],
+        subplot_titles=["Average rating per year", "Reviews with a reply, per year"],
     )
     # The values are written above the peak, the first, the last and the lowest year
     rating_texts = point_texts(trend_years["avg_rating"], lambda value: f"{value:.2f}★")
     # The reply rates have one decimal, like the key number cards
     reply_texts = point_texts(trend_years["reply_rate"], lambda value: f"{value:.1f}%")
-    complete_label = "Full year"
+    # The legend says only "Year": the first year, 2015, starts in May, so it is not a full year
+    # either. The dashed line of the last year names its months in the legend.
+    complete_label = "Year"
     fig.add_trace(go.Scatter(
         x=trend_years["year"], y=trend_years["avg_rating"], mode="lines+markers+text",
         text=rating_texts, textposition="top center", line=dict(color=LINE_COLOR, width=2),
@@ -585,6 +584,8 @@ st.caption(
 
 # st.expander hides content behind a click, so the full table is there for whoever wants it
 # without making the page longer
+# The table has no reply rate. One rate over all years would mix the years with replies to almost
+# every review and the years after 2020 with almost none, so it would describe no real year.
 with st.expander("Show the full table"):
     table_rows = []
     for _, row in topics.iterrows():
@@ -595,7 +596,6 @@ with st.expander("Show the full table"):
             "Share (%)": row["share"],
             "Average rating (stars)": row["avg_rating"],
             "95% interval (stars)": f"{row['ci_low']:.2f} to {row['ci_high']:.2f}",
-            "Reply rate (%)": row["reply_rate"],
         })
     st.dataframe(
         pd.DataFrame(table_rows),
@@ -605,7 +605,6 @@ with st.expander("Show the full table"):
             "Reviews": st.column_config.NumberColumn(format="%d"),
             "Share (%)": st.column_config.NumberColumn(format="%.1f%%"),
             "Average rating (stars)": st.column_config.NumberColumn(format="%.2f"),
-            "Reply rate (%)": st.column_config.NumberColumn(format="%.1f%%"),
         },
     )
     st.caption(
@@ -707,16 +706,21 @@ with st.container(border=True):
 
     chart_left, chart_right = st.columns(2)
     with chart_left:
-        peak_row = topic_years.loc[topic_years["share"].idxmax()]
-        chart_title(f"Highest share in {int(peak_row['year'])}: {peak_row['share']:.1f}%")
-        show_chart(topic_share_by_year_chart(topic_years, selected_color))
-        # The shares leave out the generic reviews, and their share is not the same every year,
-        # so the caption gives its lowest and highest yearly value
-        excluded_shares = excluded_share_per_year(all_reviews, topic_years["year"])
-        st.caption(
-            f"Generic reviews left out vary by year ({min(excluded_shares):.1f}% to "
-            f"{max(excluded_shares):.1f}%), so compare years with care."
-        )
+        if topic_years.empty:
+            # With no year to show, idxmax and min would fail on an empty table, so the page
+            # shows a short message instead of the chart and its caption
+            st.info("Not enough reviews per year to show how the share of this topic changed.")
+        else:
+            peak_row = topic_years.loc[topic_years["share"].idxmax()]
+            chart_title(f"Highest share in {int(peak_row['year'])}: {peak_row['share']:.1f}%")
+            show_chart(topic_share_by_year_chart(topic_years, selected_color))
+            # The shares leave out the generic reviews, and their share is not the same every year,
+            # so the caption gives its lowest and highest yearly value
+            excluded_shares = excluded_share_per_year(all_reviews, topic_years["year"])
+            st.caption(
+                f"Generic reviews left out vary by year ({min(excluded_shares):.1f}% to "
+                f"{max(excluded_shares):.1f}%), so compare years with care."
+            )
     with chart_right:
         star_shares = selected_reviews["rating"].value_counts(normalize=True) * 100
         top_star = int(star_shares.idxmax())

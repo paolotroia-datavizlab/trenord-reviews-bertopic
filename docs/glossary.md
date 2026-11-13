@@ -97,6 +97,11 @@ A distortion that arises when the data removed from an analysis differs systemat
 Here the excluded reviews are short verdicts, mostly with 5 or 1 star, and on average more positive than the
 analysed ones, so the analysis set is more negative than all reviews; notebook 07 measures this.
 
+## Generic review
+A review that only gives a verdict, such as a word of praise or blame, without saying what it is about.
+Notebook 07 gives these reviews the label EXCLUDE and leaves them out of the topics: 953 of the 6,951 Italian
+reviews. The dashboard calls them generic reviews.
+
 ## HDBSCAN
 A clustering algorithm that finds groups of points in dense regions and leaves isolated points unassigned as
 outliers. It finds the number of clusters from the data and accepts groups of any shape. K-Means, a common
@@ -168,6 +173,12 @@ Assigning outliers to an existing topic after training, here to the topic whose 
 outlier's embedding.
 All outliers were reassigned, so every Italian review has a topic.
 
+## Partial year
+A year that the data do not cover from January to December.
+The latest review is dated 2026-08-04, so 2026 is a partial year. The dashboard names it by the months it covers,
+"Jan-Aug 2026", from the month of its first review to the month of its last one. 2015 starts in May, so it is not a
+full year either.
+
 ## Precision
 For one label, the share of the items given that label that really belong to it, judged against a reference.
 In 08 the reference is my blind coding: the precision of a model label is the share of its sampled reviews to
@@ -183,6 +194,11 @@ Here the review ids are replaced by keyed hashes and the author names are remove
 A fixed starting value for a random process, which makes its result repeatable.
 UMAP uses `random_state=42`. This makes training repeatable only in the same software environment, which is why
 the environment is recorded in a [lock file](#lock-file).
+
+## Reply rate
+The share of reviews that got a reply from the developer, from the column `has_reply`.
+Notebook 04 and the dashboard compute it per year, because it changed sharply: from 83% to 100% of the Italian
+reviews every year from 2015 to 2020, and less than 4% every year from 2022 to 2025.
 
 ## Safetensors
 A file format for storing model weights safely, without the code-execution risks of pickle files.
@@ -203,7 +219,7 @@ The multilingual model `paraphrase-multilingual-mpnet-base-v2` produces the revi
 ## Smoke test
 A quick test that runs a program end to end to check that nothing breaks, without verifying every result in
 detail.
-The dashboard is smoke-tested with Streamlit's AppTest in 16 tests: the page, the key numbers, every topic of the
+The dashboard is smoke-tested with Streamlit's AppTest in 16 tests: the page, the three key numbers, every topic of the
 explorer and the expanders.
 
 ## Standard error
@@ -220,6 +236,11 @@ The spaCy Italian stopword list is removed in lemmatization and from the topic k
 A sample drawn separately from each group (stratum), with a set number of items from each, instead of from all
 items at once. It guarantees enough items from the small groups, but its proportions differ from the data.
 Notebook 08 draws 14 reviews from each of 14 strata: the 13 labels of the time the sample was drawn, and EXCLUDE.
+
+## Streamlit theme
+The colours and the font of a Streamlit app, set in the file `.streamlit/config.toml`.
+Streamlit reads the file when it starts, and Streamlit Cloud reads the same file from the repository. The dashboard
+uses it for the light base, the Trenord green of the widgets, the background and text colours and a sans-serif font.
 
 ## t distribution
 A probability distribution similar to the normal one but with heavier tails, used when the spread of the

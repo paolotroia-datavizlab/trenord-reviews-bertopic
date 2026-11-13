@@ -7,10 +7,11 @@ What do users complain about, and what do they appreciate, in the Trenord train 
 the app's public Google Play reviews, pseudonymizes them, groups the Italian reviews into topics with BERTopic,
 and publishes the results in a Streamlit dashboard.
 
-The dashboard is one scrolling page. It opens with four key numbers (reviews analysed, average rating, developer
-reply rate and how well the labels agree with a manual check), then shows what users complain about, how ratings
-and replies changed over the years, an explorer with the keywords, ratings and most upvoted reviews of each topic,
-and a short note on the method and its limits. Every number on it is computed from the published CSVs.
+The dashboard is one scrolling page. It opens with three key numbers: the average rating and the share of reviews
+with a reply in Jan-Aug 2026, each next to its 2015 value, and the share of reviews about app problems. Then it
+shows what users write about, how ratings and replies changed year by year, an explorer with the keywords, ratings
+and most upvoted reviews of each topic, and a short note on the method and its limits. Every number on it is
+computed from the published CSVs.
 
 ![Dashboard: header, key numbers and the topics users write about](reports/figures/dashboard_overview.png)
 
@@ -21,12 +22,16 @@ and a short note on the method and its limits. Every number on it is computed fr
 
 ## Key findings
 
-- **Ratings have collapsed:** the yearly average of Italian reviews fell from 3.54★ in 2015 to 1.52★ in 2025.
-- **Developer replies stopped:** Trenord answered 83-100% of reviews each year until 2020, and less than 4% since 2022.
+The numbers cover the 6,951 Italian reviews from May 2015 to August 2026, unless a year is named.
+
+- **Ratings have collapsed:** the yearly average fell from 3.54★ in 2015 to 1.52★ in 2025, and is 1.49★ in
+  Jan-Aug 2026.
+- **Developer replies stopped:** Trenord answered 83-100% of reviews every year from 2015 to 2020, 32.1% in 2021,
+  and less than 4% every year from 2022 to 2025 (1.7% in 2025, 3.5% in Jan-Aug 2026).
 - **Top app issues:** inaccurate train info (1,501 reviews), ticket purchase failures (1,143), an app that does not
   work (655) and subscription and payment failures (641).
 - **Mostly complaints:** 84.9% of the 5,998 informative reviews fall in App Issue topics, all rated between 1.40★
-  and 1.78★ with overlapping 95% confidence intervals; 1.5% are about the rail service rather than the app.
+  and 1.78★; 1.5% are about the rail service rather than the app.
 - **What users like:** ease of use is the largest Praise topic (463 reviews, 4.54★).
 - **Read with care:** the 953 excluded reviews are short verdicts, 55.2% with 5★ and 27.5% with 1★, so the analysed
   reviews are more negative than all Italian reviews (1.93★ against 2.17★).
@@ -41,7 +46,8 @@ behind each point: [Recommendations](docs/architecture.md#recommendations).
 1. Fix the train information first: Inaccurate Train Info is the largest topic (25.0% of the analysed reviews).
 2. Make buying and using a ticket reliable: tickets, subscriptions and QR codes together are 31.7% of the reviews.
 3. Improve stability and usability: App Not Working, Poor Usability, Login & Account Issues and Station Issues.
-4. Start replying to reviews again: replies fell from 83-100% a year until 2020 to less than 4% since 2022.
+4. Start replying to reviews again: replies fell from 83-100% a year from 2015 to 2020 to less than 4% a year from
+   2022 to 2025 (3.5% in Jan-Aug 2026).
 5. Keep what users like: ease of use and easy purchases, 12.3% of the reviews.
 
 ## Tech stack
@@ -72,7 +78,7 @@ reports/figures/  charts and the dashboard screenshot:
   chart_keywords_per_topic.png         07: top keywords of each topic
   chart_topic_priority.png             07: share of reviews against average rating, one dot per topic
   chart_label_confusion.png            08: my labels against the model labels, 196 sampled reviews
-  dashboard_overview.png               dashboard screenshot: header, key numbers, topic chart
+  dashboard_overview.png               dashboard screenshot: header, three key numbers, topic chart
 tests/            dashboard smoke tests (Streamlit AppTest)
 ```
 

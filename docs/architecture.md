@@ -102,8 +102,8 @@ same model after the merges in 07, saved for reuse; no other step reads it (§9)
 ## 2. Key numbers
 
 This table is the single source of numbers for the article. **All languages** figures come from notebook 04.
-**Italian only** figures cover the topic analysis and the dashboard. Yearly figures use complete years
-(up to 2025).
+**Italian only** figures come from `trenord_reviews_labeled.csv` (07), the file the dashboard reads. Yearly figures
+use complete years (up to 2025), except the row for Jan-Aug 2026, the partial year shown by the dashboard.
 
 ### Data and coverage
 
@@ -116,14 +116,15 @@ This table is the single source of numbers for the article. **All languages** fi
 
 ### Ratings and replies
 
-| Measure | All languages (04) | Italian only (dashboard) |
+| Measure | All languages (04) | Italian only (07 output) |
 |---|---|---|
 | Reviews | 7,329 | 6,951 |
 | Average rating | **2.26** | **2.17** |
 | Average rating, first → last complete year | 3.56 (2015) → 1.57 (2025) | 3.54 (2015) → 1.52 (2025) |
-| Developer reply rate, overall | 41.6% (3,052 reviews) | 41.1% |
+| Developer [reply rate](glossary.md#reply-rate), overall | 41.6% (3,052 reviews) | 41.1% |
 | Reply rate 2015-2020 | 83-100% each year | 83-100% each year (peak 100%, 2016) |
 | Reply rate 2021 → 2025 | 32.5% → 1.6% (below 4% every year from 2022) | 32.1% → 1.7% (below 4% every year from 2022) |
+| Average rating and reply rate, Jan-Aug 2026 | - | 1.49 and 3.5% (dashboard cards) |
 
 ### Topics
 
@@ -1406,79 +1407,146 @@ reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 
 ## 11. Dashboard
 
-**In plain words.** The dashboard is a single web page that tells the results in order of importance, for a reader
-who has never seen the project: who wrote what, how it changed, and how far the labels can be trusted. Every number
-on it is computed from the published files when the page loads.
+The dashboard is one web page, `dashboard/app.py`. It tells the results in order of importance, for a reader who has
+never seen the project. Every number on it is computed from the published files when the page loads, so nothing is
+copied by hand.
 
 ### Layout
-One scrolling page, `dashboard/app.py`, from top to bottom:
-1. **Header.** A banner in Trenord green with the title "Trenord app reviews: what users say", the subtitle "Google
-   Play reviews in Italian, 2015 to 2026" (first and last year from the data) and the byline "An independent
-   analysis by Paolo Troia" with links to LinkedIn, the blog and the repository. Under it: "Not affiliated with or
-   endorsed by Trenord."
-2. **One sentence with the main message**, computed: the average rating of the last complete year against the first,
-   the share of App Issue reviews and the reply rate of the last complete year.
-3. **Four key numbers** (`st.metric`, one row), each with its context in the delta and the details in the help
-   tooltip: reviews analysed, average rating, developer reply rate, labels checked by hand.
-4. **What users complain about.** A horizontal bar chart of the 12 topics by share of the analysed reviews, largest
-   first, coloured by category, with share and average rating written next to each bar. A caption says what the
-   shares are based on and how many reviews were set aside. An expander, "Show the full table", holds label,
-   category, reviews, share, average rating, 95% confidence interval and reply rate.
-5. **How it changed.** One chart with two panels on the same year axis: average rating per year and developer reply
-   rate per year, on all Italian reviews. The caption says that the two lines move together but that this does not
-   show that one caused the other.
-6. **Explore a topic.** A dropdown with the 12 topics, sorted by share. Inside a frame: four small metrics (reviews,
-   share, average rating with its 95% interval, reply rate), the 5 keywords of the topic, its share of the analysed
-   reviews per year, its rating distribution and its most upvoted reviews in expanders, the first one open.
-7. **About this analysis.** Three short paragraphs (method, reliability of the labels with the numbers, limits), the
-   link to the repository and the disclaimer again.
+`st.set_page_config` sets `layout="wide"`, and a small CSS rule keeps the main content at most 1,200 pixels wide and
+centred, so lines of text stay short on a large monitor. From top to bottom:
 
-The main view, everything above "Explore a topic", has seven visual elements: the banner, the four key number cards,
-the topic chart and the trend chart. The full table stays closed in its expander. Technical terms (BERTopic,
-c-TF-IDF, Cohen's kappa, UMAP, stratified sample) appear only in the help tooltips and in "About this analysis", each
-explained in one sentence.
+1. Header. A banner in Trenord green with a red bottom border. Title: "Trenord App Reviews - What Users Say".
+   Subtitle, computed from the first and the last review date: "6,951 Google Play reviews in Italian, May 2015 to
+   August 2026".
+2. Three key number cards, side by side on a computer and one under the other on a phone (see below).
+3. What users write about. The sentence "Each review was assigned to one of 12 topics. The bars show each topic's
+   share of the 5,998 reviews about a specific topic." Then a horizontal bar chart of the 12 topics, largest first,
+   coloured by category, with a legend of the four categories. The topic name is written above each bar and only the
+   share is written next to it, with one decimal. The chart has no x axis and no grid lines. A caption says that 953
+   reviews (13.7% of the 6,951) only give a generic verdict and were set aside ([generic
+   reviews](glossary.md#generic-review)). The expander "Show the full table"
+   holds topic, category, reviews, share, average rating and its 95% confidence interval.
+4. How it changed. The sentence "Average rating and share of reviews with a reply, year by year.", a checked title
+   (see below) and one chart with two panels on the same year axis: "Average rating per year" and "Reviews with a
+   reply, per year". The legend has two entries: "Year" and "Jan-Aug 2026". The caption is "The two lines move
+   together, but this does not prove one caused the other."
+5. Explore a topic. A dropdown with the 12 topics, largest first. Inside a frame: the category as a coloured badge,
+   three metrics, the 5 most typical words, the share of the topic per year, its rating distribution and its most
+   upvoted reviews (see below).
+6. About this analysis. Three short paragraphs (see below).
+7. Footer. One small centred line: "Paolo Troia · LinkedIn · GitHub", with links to LinkedIn and to the repository.
 
 ### Data files read
 Paths are built from `Path(__file__).parent.parent / "data" / "processed"`. Each file is read once and kept in
 memory with `st.cache_data`.
 - `trenord_reviews_labeled.csv` (07): all 6,951 Italian reviews, the generic ones (`EXCLUDE`) included. Used for
-  the review count, the yearly rating and reply rate, the share of excluded reviews and the number of topics found
-  by the model.
+  the subtitle, the yearly rating and reply rate, the cards and the number of generic reviews.
 - `trenord_reviews_analysis.csv` (07): the 5,998 reviews of the 12 topics. Used for the topic chart, the full table
   and the explorer.
 - `top_reviews_per_topic.csv` (07): the most upvoted reviews of each topic.
-- `topic_keywords.csv` (07): the top 5 keywords of each topic (§9).
-- `validation_summary.csv` (08): raw agreement, Cohen's kappa and weighted agreement with their 95% intervals and
-  the sample size (§10).
+- `topic_keywords.csv` (07): the 5 most typical words of each topic (§9).
+- `validation_summary.csv` (08): the agreement numbers (§10). The page shows the weighted agreement and the sample
+  size, in "About this analysis".
 
-### How each number is computed
-"Trend years" are the complete years with at least `MIN_REVIEWS_PER_YEAR = 30` reviews in
-`trenord_reviews_labeled.csv`. The last complete year is the year of the latest review if that review is dated
-31 December, otherwise the year before. Every year from 2015 to 2025 is a trend year (minimum 154 reviews); 2026 is
-incomplete.
+### Years
+- The last complete year is the year of the latest review if that review is dated 31 December, otherwise the year
+  before. The latest review is dated 2026-08-04, so the last complete year is 2025.
+- A year is shown only if it has at least `MIN_REVIEWS_PER_YEAR = 30` reviews. Every year from 2015 to 2025 has
+  more (the fewest is 154, in 2016).
+- The year after the last complete one is a [partial year](glossary.md#partial-year). It is shown only if it has at least 30 reviews: 2026 has
+  314.
+- The partial year is named by its months: the month of its first review and the month of its last one, with the
+  short English month names. The first review of 2026 is dated 2026-01-03 and the last 2026-08-04, so the page writes
+  "Jan-Aug 2026". If both reviews were in the same month, it would write only that month.
+- 2015 starts in May, so it is not a full year either. For this reason the legend of the trend chart says "Year",
+  not "Full year".
 
-| Number | How it is computed | Value at this snapshot |
-|---|---|---|
-| Reviews analysed | rows of `trenord_reviews_labeled.csv`; delta: rows of `trenord_reviews_analysis.csv` | 6,951; 5,998 about a specific topic |
-| Average rating | mean `rating` of the last trend year; delta against the first trend year | 1.52 stars in 2025; -2.03 stars vs 2015 (3.54) |
-| Developer reply rate | mean of `has_reply` in the last trend year; delta against the trend year with the highest rate | 1.7% in 2025; -98.3 percentage points vs 2016 (100.0%) |
-| Labels checked by hand | `weighted_agreement` of `validation_summary.csv`; kappa and both intervals in the tooltip | 86.6% (95% CI 81.7% to 91.2%); kappa 0.812 (0.763 to 0.862) |
-| App Issue share in the opening sentence | sum of the shares of the App Issue topics, rounded | 85% (84.9%) |
-| Topic share | reviews of the topic / reviews of the 12 topics | from 25.0% (Inaccurate Train Info) to 1.4% (Improvement Feedback) |
-| Average rating of a topic and its 95% interval | mean ± t(0.975, n-1) · s / √n, as in 07 | Inaccurate Train Info 1.78 stars (1.72 to 1.84) |
-| Reply rate of a topic | mean of `has_reply` over the topic reviews | Inaccurate Train Info 48.4% |
-| Reviews set aside | `EXCLUDE` rows / all Italian reviews | 953, 13.7% |
-| Excluded share per year (explorer caption) | `EXCLUDE` share of each year shown in the explorer chart, lowest and highest | 7.4% (2017) to 23.8% (2020) |
-| Topic share per year (explorer chart) | share of the analysed reviews of each trend year with at least 30 analysed reviews | every year 2015-2025 |
-| Topics found by the model (About) | distinct `topic` values in `trenord_reviews_labeled.csv` | 30 |
+### The three key number cards
+Each card is an `st.metric` with a label, a value, a grey note under it and a help text behind the question mark.
+The cards use the partial year if there is one, otherwise the last complete year. Each number is rounded once, and
+the value and the note use the same rounded number.
 
-The chart titles are computed too: the topic chart names the largest App Issue or Rail Service topic ("Inaccurate
-Train Info is the most common complaint, in 25.0% of the reviews about a topic"), the trend chart the first and last
-trend year and the reply peak, and the explorer charts the peak year of the topic and its most common rating.
+| Card | Value | Grey note | Help text |
+|---|---|---|---|
+| Average rating, Jan-Aug 2026 | mean `rating` of the Jan-Aug 2026 reviews: 1.49 stars | the same for the first year shown: 3.54 in 2015 | "Average stars given in reviews written in Jan-Aug 2026." |
+| Reviews about app problems | share of the 5,998 topic reviews in App Issue topics: 84.9% | number of `EXCLUDE` reviews: excludes 953 generic reviews | "Share of reviews that describe a problem with the app. Generic reviews like 'great' or 'terrible' are left out." |
+| Reviews with a reply, Jan-Aug 2026 | mean of `has_reply` in Jan-Aug 2026: 3.5% | the same for the first year shown: 87.1% in 2015 | "Share of reviews written in Jan-Aug 2026 that got a reply." |
+
+### The topic chart
+- Share of a topic: its reviews divided by the 5,998 topic reviews. From 25.0% (Inaccurate Train Info) to 1.4%
+  (Improvement Feedback).
+- Title, computed: "Inaccurate Train Info is the most common topic: 1 review in 4". The 4 is 100 divided by the
+  share of the largest topic (25.0%), rounded.
+- The x range ends 18% after the longest bar, so its label fits on a phone.
+- Hovering a bar shows the topic, its category, its share, its number of reviews and its average rating.
+- Full table: the average rating of each topic with its 95% confidence interval, mean ± t(0.975, n-1) · s / √n, as
+  in 07. For example, Inaccurate Train Info has 1.78 stars (1.72 to 1.84). Reply rates are shown only per year: one rate
+  over all years would mix the years with replies to almost every review and the years after 2020 with almost none.
+
+### The trend chart and its checked title
+The two panels show the yearly average rating and the yearly share of reviews with a reply, for every year from
+2015 to 2025, and Jan-Aug 2026 as a grey dashed segment. Only some points carry their value, so the labels never
+touch on a phone: the peak, the first year, the last year and the lowest point, skipping a point next to one already
+labelled. The reply values have one decimal, like the cards. Hovering shows every value.
+
+The title is made of two sentences, and each one is written only if a check on the yearly values is true:
+- "Replies almost stopped after 2020." Check: every year after 2020 has a lower reply rate than 2020 (98.2%). True:
+  32.1% in 2021, then from 1.7% to 3.5% from 2022 to Jan-Aug 2026.
+- "Ratings have been at their lowest since 2023." Check: the best year from 2023 on is below the worst year before
+  2023. True: the best from 2023 on is 1.52 (2025), the worst before is 1.95 (2018).
+
+The two years are the constants `LAST_REPLY_YEAR = 2020` and `FIRST_LOW_RATING_YEAR = 2023`. If new data made a check
+false, its sentence would disappear from the title instead of saying something wrong.
+
+| Year | Reviews | Average rating | Reviews with a reply |
+|---|---|---|---|
+| 2015 | 186 | 3.54 | 87.1% |
+| 2016 | 154 | 3.25 | 100.0% |
+| 2017 | 242 | 2.50 | 99.2% |
+| 2018 | 452 | 1.95 | 96.7% |
+| 2019 | 1,005 | 2.74 | 83.7% |
+| 2020 | 731 | 3.08 | 98.2% |
+| 2021 | 670 | 2.34 | 32.1% |
+| 2022 | 860 | 2.19 | 3.1% |
+| 2023 | 929 | 1.50 | 2.7% |
+| 2024 | 755 | 1.49 | 2.0% |
+| 2025 | 653 | 1.52 | 1.7% |
+| Jan-Aug 2026 | 314 | 1.49 | 3.5% |
+
+### The topic explorer
+- Category badge: `st.badge` accepts only a few named colours, so each category gets the closest one: App Issue red,
+  Praise green, Rail Service violet, App Updates blue (`CATEGORY_BADGE_COLORS`).
+- Three metrics: reviews, share of the topic reviews and average rating. The help text of the average rating gives
+  its interval, for example "95% confidence interval: 1.72 to 1.84 stars." Reply rates stay per year, as in the
+  full table.
+- Most typical words: the 5 keywords of `topic_keywords.csv`, in Italian.
+- Share per year: the share of the topic among the topic reviews of each complete year with at least 30 topic
+  reviews (every year from 2015 to 2025). Title, computed: "Highest share in <year>: <x.x>%", for example "Highest
+  share in 2018: 42.6%" for Inaccurate Train Info. Caption: "Generic reviews left out vary by year (7.4% to 23.8%), so
+  compare years with care." The two numbers are the lowest and the highest share of `EXCLUDE` reviews among the
+  years of the chart (2017 and 2020). If no year had enough reviews, an `st.info` message would replace the chart and
+  its caption.
+- Rating distribution: the share of the topic reviews with each number of stars. Title, computed, for example "63% of
+  these reviews give 1 star".
+- Most upvoted reviews: up to 5 reviews from `top_reviews_per_topic.csv`, each in an expander with its upvotes, stars
+  and date. The first one is open.
+
+### About this analysis
+Three short paragraphs. Every number is read from the data files:
+
+> 6,951 Italian reviews from Google Play, grouped into 12 topics with BERTopic and named by hand. 953 generic reviews
+> like "great" or "terrible" are left out. A manual check of 196 reviews agrees with the topics in 86.6% of cases.
+>
+> Google Play only. Unhappy users write more, so the shares describe reviewers, not all users.
+>
+> Code and full method on GitHub.
+
+86.6% is the weighted agreement of `validation_summary.csv` and 196 its sample size (§10). "GitHub" links to the
+repository.
 
 ### Theme and brand colours
-`.streamlit/config.toml` sets the theme; Streamlit reads it at start, and Streamlit Cloud reads the same file from
-the repository:
+`.streamlit/config.toml` sets the [theme](glossary.md#streamlit-theme). Streamlit reads it when it starts, and Streamlit Cloud reads the same file
+from the repository.
 
 | Setting | Value |
 |---|---|
@@ -1490,63 +1558,52 @@ the repository:
 | `font` | `sans-serif` |
 
 The two brand colours come from trenord.it, checked on 2026-11-13:
-- **Trenord green `#006633`**: the background of the header bar of the site, the rule
-  `.header-top .background-top{background-color:#006633}` in its merged stylesheet; the same colour is used by the
-  sticky menu and the side navigation.
-- **Trenord red `#D71920`**: the colour of the red mark in the logo image
-  `https://www.trenord.it/fileadmin/templates/img/header/logo-top-trenord.png`, sampled from the image. Apart from
-  white, it is the only opaque colour of the logo (1,060 pixels). The site CSS uses other reds, such as `#d20019`,
-  for single elements; the logo colour was chosen.
+- Trenord green `#006633` is the background of the header bar of the site, the rule
+  `.header-top .background-top{background-color:#006633}` in its stylesheet.
+- Trenord red `#D71920` is the colour of the red mark in the logo image
+  `https://www.trenord.it/fileadmin/templates/img/header/logo-top-trenord.png`, sampled from the image.
 
-The brand colours are used only for the interface: the green banner, its red bottom border and the primary colour
-of the widgets. The logo is not used. The data keep the [Okabe-Ito](glossary.md#okabe-ito-palette) colours of the
+The brand colours are used only for the interface: the green banner, its red bottom border and the primary colour of
+the widgets. The logo is not used. The data keep the [Okabe-Ito](glossary.md#okabe-ito-palette) colours of the
 notebooks: App Issue `#D55E00`, Praise `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`, and from 1 to 5
 stars `#D55E00`, `#E69F00`, `#999999`, `#66C5AB`, `#009E73`. The yearly lines carry no category, so they are dark
-grey `#4A4A4A`, and the incomplete year is a lighter grey `#9B9B9B` with a dashed line.
+grey `#4A4A4A`, and the partial year is a lighter grey `#9B9B9B` with a dashed line.
 
 ### Charts
-- All charts are Plotly, drawn with `theme=None` so the style is the one set in the app: white background, light
-  grid `#E6E6E6`, flat colours, the same font size (13) everywhere, no toolbar.
-- Every value is also written as text, so colour is never the only way to read it: share and average rating next
-  to each topic bar, the category in the legend, the hover text and the full table.
+- All charts are Plotly, drawn with `theme=None`, so the style is the one set in the app: white background, light
+  grid `#E6E6E6`, the same font size (13) everywhere and no toolbar.
 - Chart titles are written above each chart with `st.markdown`, because Markdown wraps on a phone and a Plotly title
-  does not. Every axis has a label with its unit.
-- On the topic chart the topic names are written above the bars instead of on the axis, so the bars keep their width
-  on a phone.
-- On the yearly charts only some points carry their value, so the labels never touch on a phone: the peak, the first
-  year, the last year and the lowest point, skipping a point next to one already labelled. Hovering shows every
-  value.
-- The incomplete year 2026 is shown as a dashed grey segment and named in the legend ("2026, partial year").
+  does not.
+- Every value can be read without the colours: it is written as text, in the hover or in the full table.
 - The page was checked at 1,440 and 390 pixels wide in headless Chrome.
 
 ### Parameters
 
 | Parameter | Value | Why |
 |---|---|---|
-| `MIN_REVIEWS_PER_YEAR` | 30 | So that peaks and trends are not driven by a handful of reviews; a common rule-of-thumb sample size, not tuned. |
+| `MIN_REVIEWS_PER_YEAR` | 30 | So that a year with a handful of reviews cannot make a peak on its own; a common rule-of-thumb sample size, not tuned. |
+| `LAST_REPLY_YEAR` | 2020 | The last year with a reply to almost every review, named in the trend title. |
+| `FIRST_LOW_RATING_YEAR` | 2023 | The first year of the lowest ratings, named in the trend title. |
 | `FONT_SIZE` | 13 | One size for ticks, labels, values and legends, readable on a phone. |
 | Labelled yearly points | peak, first, last, lowest | Enough to read the trend without labels touching at 390 pixels. |
 
-### Disclaimer
-This is an independent analysis of public reviews. The page says "Not affiliated with or endorsed by Trenord." under
-the banner and again at the end. The brand colours only make the subject recognisable; the logo is not used.
-
 ### Design decisions
-- **One page instead of tabs and filters.** The earlier version had four tabs and sidebar filters. A reader had to
-  click to find the message; now the header and the key numbers give it in a few seconds, and the explorer keeps the
-  detail for whoever wants it.
-- **No word analysis.** The Words tab (frequent words, critical words, word cloud) was removed on 2026-11-13, with
-  its functions, `dashboard/stopwords_it.txt`, the cell of 03 that exported it and the `wordcloud` package. The
-  topics and their keywords already say what the reviews are about, so the page keeps only them.
-- **Only the files of the pipeline.** The keywords and the agreement numbers are read from two small CSVs written by
-  07 and 08, never copied by hand. The app does not load the model, so the dashboard needs only streamlit, pandas,
-  plotly and scipy (`requirements.txt`). scipy gives the t distribution of the confidence intervals, the same as 07.
+- One scrolling page, with no tabs and no filters. A reader sees the main message in the header and the cards, and
+  the explorer keeps the detail for whoever wants it.
+- The cards show the newest data, Jan-Aug 2026, and compare it with the first year, 2015. The label always says which
+  period it is.
+- Reply rates only per year. The reply rate changed so much in 2021 that one rate over all years would describe no
+  real year, so the page shows it per year, in the cards and in the trend chart.
+- Only the files of the pipeline. The keywords and the agreement numbers are read from two small CSVs written by 07
+  and 08. The app does not load the model, so the dashboard needs only streamlit, pandas, plotly and scipy
+  (`requirements.txt`). scipy gives the t distribution of the confidence intervals, the same as in 07.
 
 ### Validation
 `tests/test_dashboard.py` runs the app with `streamlit.testing.v1.AppTest` in 16
 [smoke tests](glossary.md#smoke-test), all passing:
 - the page renders without exceptions, with its four sections in order;
-- the four key numbers show a value, and the first is the number of Italian reviews;
+- the three cards have the expected labels and a value, and the second shows the App Issue share computed from the
+  analysis file;
 - the dropdown lists the 12 topics sorted by share;
 - each of the 12 topics can be selected without exceptions, and the explorer shows its number of reviews (12 tests);
 - the expanders hold their content: the full table with 12 rows, and the text of each upvoted review.
@@ -1780,8 +1837,8 @@ explorer of the dashboard.
 
 ### `validation_summary.csv`
 
-The agreement between my blind coding and the model labels (§10): 3 rows, 5 columns. Read by the key numbers and
-"About this analysis" of the dashboard.
+The agreement between my blind coding and the model labels (§10): 3 rows, 5 columns. The dashboard reads the
+weighted agreement and the sample size, for "About this analysis".
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
