@@ -3,6 +3,7 @@
 # setuptools, installed with the venv but left out of the first freeze, was added on 2026-11-03.
 # nbformat and its dependency fastjsonschema, already installed, were added on 2026-11-04.
 # openpyxl and its dependency et_xmlfile were installed and added on 2026-11-05 without changing any other version.
+# openai and its new dependencies jiter and sniffio were installed and added on 2026-11-13 without changing any other version.
 # In this environment 06_topic_model_training reproduces the current topic model exactly.
 # Direct dependencies: requirements-notebooks.txt (notebooks) and requirements.txt (dashboard).
 # Install: pip install -r requirements-notebooks.lock.txt
@@ -58,6 +59,7 @@ it_core_news_lg @ https://github.com/explosion/spacy-models/releases/download/it
 itsdangerous==2.2.0
 jedi==0.20.1
 Jinja2==3.1.6
+jiter==0.19.0
 joblib==1.6.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
@@ -79,6 +81,7 @@ nest-asyncio==1.6.0
 networkx==3.7
 numba==0.68.1
 numpy==2.4.4
+openai==3.51.0
 openpyxl==3.1.5
 packaging==26.3
 pandas==3.0.2
@@ -118,6 +121,7 @@ setuptools==81.0.0
 shellingham==1.5.4
 smart_open==9.0.1
 smmap==5.0.3
+sniffio==1.3.1
 spacy==3.8.14
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5
