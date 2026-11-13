@@ -94,6 +94,12 @@ FONT_FAMILY = "sans-serif"
 # handful of reviews cannot make a peak on its own
 MIN_REVIEWS_PER_YEAR = 30
 
+# The two years named in the title of the trend chart: the last year with replies to almost every
+# review, and the first year of the lowest ratings. The page checks both sentences against the
+# yearly values before writing them.
+LAST_REPLY_YEAR = 2020
+FIRST_LOW_RATING_YEAR = 2023
+
 # The label of the reviews set aside in notebook 07, because they only give a generic verdict
 EXCLUDED_LABEL = "EXCLUDE"
 # The category that holds the problems with the app, used in the second key number card
@@ -223,21 +229,33 @@ first_year_row = trend_years.iloc[0]
 last_year_row = trend_years.iloc[-1]
 first_year = int(first_year_row["year"])
 last_year = int(last_year_row["year"])
-peak_reply_row = trend_years.loc[trend_years["reply_rate"].idxmax()]
-peak_reply_year = int(peak_reply_row["year"])
 
 # The incomplete last year is shown only if it has enough reviews
 incomplete_years = years[~years["complete"] & years["enough_reviews"]]
 
-# The year of the key number cards: the current year so far, if it already has enough reviews,
-# so the cards show the newest data; otherwise the last full year. card_year_text says which, and
-# goes into the labels and the help texts.
+# The months covered by the partial year, for example "Jan-Aug 2026": the month of its first
+# review and the month of its last one. month_name()[:3] gives the short English month name
+# whatever the language of the computer. partial_year_text stays empty if there is no partial year.
+partial_year_text = ""
+if not incomplete_years.empty:
+    partial_year = int(incomplete_years["year"].iloc[-1])
+    partial_dates = all_reviews.loc[all_reviews["year"] == partial_year, "date"]
+    first_month = partial_dates.min().month_name()[:3]
+    last_month = partial_dates.max().month_name()[:3]
+    if first_month == last_month:
+        partial_year_text = f"{last_month} {partial_year}"
+    else:
+        partial_year_text = f"{first_month}-{last_month} {partial_year}"
+
+# The year of the key number cards: the partial year, if it already has enough reviews, so the
+# cards show the newest data; otherwise the last full year. card_year_text says which, and goes
+# into the labels and the help texts.
 if incomplete_years.empty:
     card_year_row = last_year_row
     card_year_text = f"{last_year}"
 else:
     card_year_row = incomplete_years.iloc[-1]
-    card_year_text = f"{int(card_year_row['year'])} so far"
+    card_year_text = partial_year_text
 
 topics = topic_numbers(topic_reviews)
 n_italian = len(all_reviews)
@@ -361,16 +379,18 @@ def topic_share_chart(topics):
     return fig
 
 
-def trend_chart(trend_years, incomplete_years):
-    """Average rating and reply rate per year, in two panels with the same year axis."""
+def trend_chart(trend_years, incomplete_years, partial_year_text):
+    """Average rating and reply rate per year, in two panels with the same year axis.
+    partial_year_text names the partial year in the legend, for example "Jan-Aug 2026"."""
     fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.12,
         subplot_titles=["Average rating per year", "Reviews with a reply from the developer, per year"],
     )
     # The values are written above the peak, the first, the last and the lowest year
     rating_texts = point_texts(trend_years["avg_rating"], lambda value: f"{value:.2f}★")
-    reply_texts = point_texts(trend_years["reply_rate"], lambda value: f"{value:.0f}%")
-    complete_label = f"Complete years with at least {MIN_REVIEWS_PER_YEAR} reviews"
+    # The reply rates have one decimal, like the key number cards
+    reply_texts = point_texts(trend_years["reply_rate"], lambda value: f"{value:.1f}%")
+    complete_label = "Full year"
     fig.add_trace(go.Scatter(
         x=trend_years["year"], y=trend_years["avg_rating"], mode="lines+markers+text",
         text=rating_texts, textposition="top center", line=dict(color=LINE_COLOR, width=2),
@@ -384,32 +404,33 @@ def trend_chart(trend_years, incomplete_years):
         hovertemplate="%{x}: %{y:.1f}% of reviews<extra></extra>",
     ), row=2, col=1)
 
-    # The incomplete last year: a dashed segment from the last complete year. The legend says it
-    # is a partial year, and its value is written under the point, away from the last full year.
+    # The incomplete last year: a dashed segment from the last complete year. The legend names
+    # the months it covers, and its value is written under the point, away from the last full year.
+    # The segment starts at the last full year, so the hover names each point with customdata:
+    # the year for the first point, the months of the partial year for the second.
     if not incomplete_years.empty:
         partial = pd.concat([trend_years.tail(1), incomplete_years])
-        partial_year = int(incomplete_years["year"].iloc[-1])
-        partial_label = f"{partial_year}, partial year"
+        hover_names = [f"{int(partial['year'].iloc[0])}", partial_year_text]
         partial_rating_texts = ["", f"{partial['avg_rating'].iloc[-1]:.2f}★"]
-        partial_reply_texts = ["", f"{partial['reply_rate'].iloc[-1]:.0f}%"]
+        partial_reply_texts = ["", f"{partial['reply_rate'].iloc[-1]:.1f}%"]
         fig.add_trace(go.Scatter(
             x=partial["year"], y=partial["avg_rating"], mode="lines+markers+text",
             text=partial_rating_texts, textposition="bottom center",
             line=dict(color=INCOMPLETE_COLOR, width=2, dash="dash"), marker=dict(size=8),
-            name=partial_label, legendgroup="partial",
-            hovertemplate="%{x}, partial year: %{y:.2f} stars<extra></extra>",
+            name=partial_year_text, legendgroup="partial", customdata=hover_names,
+            hovertemplate="%{customdata}: %{y:.2f} stars<extra></extra>",
         ), row=1, col=1)
         fig.add_trace(go.Scatter(
             x=partial["year"], y=partial["reply_rate"], mode="lines+markers+text",
             text=partial_reply_texts, textposition="bottom center",
             line=dict(color=INCOMPLETE_COLOR, width=2, dash="dash"), marker=dict(size=8),
-            name=partial_label, legendgroup="partial", showlegend=False,
-            hovertemplate="%{x}, partial year: %{y:.1f}% of reviews<extra></extra>",
+            name=partial_year_text, legendgroup="partial", showlegend=False, customdata=hover_names,
+            hovertemplate="%{customdata}: %{y:.1f}% of reviews<extra></extra>",
         ), row=2, col=1)
 
     fig.update_yaxes(title_text="Stars (1 to 5)", range=[1, 5], row=1, col=1)
     # Room under 0% for the value of the partial year
-    fig.update_yaxes(title_text="Reviews (%)", range=[-20, 115], tickvals=[0, 20, 40, 60, 80, 100],
+    fig.update_yaxes(title_text="Reviews with a reply (%)", range=[-20, 115], tickvals=[0, 20, 40, 60, 80, 100],
                      ticktext=["0%", "20%", "40%", "60%", "80%", "100%"], row=2, col=1)
     fig.update_xaxes(title_text="Year", dtick=1, row=2, col=1)
     fig.update_xaxes(dtick=1, row=1, col=1)
@@ -590,23 +611,38 @@ with st.expander("Show the full table"):
 # ─────────────────────────────────────────────────────────────
 
 st.subheader("How it changed")
-st.markdown(
-    "Ratings and developer replies per year, on all Italian reviews, show whether the app "
-    "got better or worse for its users and how the developer reacted."
-)
+st.markdown("Average rating and share of reviews with a reply, year by year.")
 
-rating_verb = "fell" if last_year_row["avg_rating"] < first_year_row["avg_rating"] else "rose"
-chart_title(
-    f"Average rating {rating_verb} from {format_stars(first_year_row['avg_rating'])} in {first_year} "
-    f"to {format_stars(last_year_row['avg_rating'])} in {last_year}, and replies went from "
-    f"{peak_reply_row['reply_rate']:.1f}% at their peak in {peak_reply_year} to "
-    f"{last_year_row['reply_rate']:.1f}%"
+# The title makes two claims, so each one is checked against the yearly values first, on every
+# year with enough reviews, the partial year included. A sentence goes into the title only if its
+# check is true, so new data can never make the title say something false.
+shown_years = years[years["enough_reviews"]]
+# Replies: every year after LAST_REPLY_YEAR has a lower reply rate than LAST_REPLY_YEAR itself
+reply_rate_then = shown_years.loc[shown_years["year"] == LAST_REPLY_YEAR, "reply_rate"]
+reply_rates_after = shown_years.loc[shown_years["year"] > LAST_REPLY_YEAR, "reply_rate"]
+replies_dropped = (
+    len(reply_rate_then) == 1
+    and len(reply_rates_after) > 0
+    and (reply_rates_after < reply_rate_then.iloc[0]).all()
 )
-show_chart(trend_chart(trend_years, incomplete_years))
-st.caption(
-    f"Complete years with at least {MIN_REVIEWS_PER_YEAR} reviews; a partial year, if shown, is dashed. "
-    "The two lines move together, but this does not show that one caused the other."
+# Ratings: the best year from FIRST_LOW_RATING_YEAR on is still below the worst year before it
+ratings_before = shown_years.loc[shown_years["year"] < FIRST_LOW_RATING_YEAR, "avg_rating"]
+ratings_from = shown_years.loc[shown_years["year"] >= FIRST_LOW_RATING_YEAR, "avg_rating"]
+ratings_lowest = (
+    len(ratings_before) > 0
+    and len(ratings_from) > 0
+    and ratings_from.max() < ratings_before.min()
 )
+title_sentences = []
+if replies_dropped:
+    title_sentences.append(f"Replies almost stopped after {LAST_REPLY_YEAR}.")
+if ratings_lowest:
+    title_sentences.append(f"Ratings have been at their lowest since {FIRST_LOW_RATING_YEAR}.")
+if not title_sentences:
+    title_sentences.append("Average rating and reviews with a reply per year")
+chart_title(" ".join(title_sentences))
+show_chart(trend_chart(trend_years, incomplete_years, partial_year_text))
+st.caption("The two lines move together, but this does not prove one caused the other.")
 
 # ─────────────────────────────────────────────────────────────
 # EXPLORE A TOPIC
