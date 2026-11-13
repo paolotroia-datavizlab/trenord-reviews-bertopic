@@ -34,7 +34,7 @@ Python 3.13 · pandas · spaCy · BERTopic · Plotly · Streamlit
 
 ## Limits
 
-- Google Play only. The scraper collected every written review it could reach (7,329); the store's count of 16,787 ratings also includes star-only ratings, which have no text.
+- Google Play only, and only the written reviews the scraper could reach.
 - Unhappy users write more, so the shares describe reviewers, not all users.
 - 953 generic reviews ("great", "terrible") are left out of the topics.
 
