@@ -17,7 +17,7 @@ This page explains the steps, the main choices and the checks. The code and the 
 
 ## Data
 
-I collected 7,329 reviews, 43.7% of the ratings on the store at the time. 6,951 are in Italian and are the ones analysed. 363 have no clear language and 15 are in other languages.
+I collected 7,329 reviews, every written review the scraper could reach. The store showed 16,787 ratings, but that count also includes star-only ratings without text. 6,951 are in Italian and are the ones analysed. 363 have no clear language and 15 are in other languages.
 
 ## Topic model
 
@@ -51,7 +51,7 @@ Author names are dropped, review ids are pseudonymized with a secret key kept ou
 
 ## Limits
 
-- Google Play only, and 43.7% of the store's ratings.
+- Google Play only.
 - Unhappy users write more, so the shares describe reviewers, not all users.
 - Star ratings are ordinal; I used averages anyway, as is common.
 - The manual check was done by one person, me.
