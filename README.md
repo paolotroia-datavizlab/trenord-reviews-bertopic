@@ -38,8 +38,8 @@ Python 3.13 · pandas · spaCy · BERTopic · Plotly · Streamlit
 - Unhappy users write more, so the shares describe reviewers, not all users.
 - 953 generic reviews ("great", "terrible") are left out of the topics.
 
-## Data and license
+## License
 
-Author names are removed and review ids are pseudonymized. The code is MIT-licensed. The review texts belong to their authors and are not covered by the license; to have a review removed, open an issue.
+The review texts belong to their authors and are not covered by the MIT license.
 
 Paolo Troia · [LinkedIn](https://www.linkedin.com/in/paolotroia/)
