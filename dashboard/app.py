@@ -28,10 +28,26 @@ from scipy.stats import t
 # ─────────────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Trenord app reviews: what users say",
+    page_title="Trenord App Reviews - What Users Say",
     page_icon="🚆",
     layout="wide",
     initial_sidebar_state="collapsed",
+)
+
+# The wide layout stretches the page over the whole screen, and on a large monitor a line of
+# text becomes much longer than about 90 characters, which is hard to read: the eye loses the
+# start of the next line. This small CSS rule keeps the main content at most 1200 pixels wide
+# and centred. stMainBlockContainer is the name Streamlit gives to the box that holds the page.
+st.markdown(
+    """
+    <style>
+    [data-testid="stMainBlockContainer"] {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -43,7 +59,6 @@ ROOT_DIR = Path(__file__).parent.parent
 DATA_DIR = ROOT_DIR / "data" / "processed"
 
 LINKEDIN_URL = "https://www.linkedin.com/in/paolotroia/"
-BLOG_URL = "https://www.paolotroia.com"
 REPO_URL = "https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic"
 
 # Trenord brand colours, used only for the interface (header banner and accents), never for data.
@@ -430,105 +445,83 @@ def rating_distribution_chart(ratings):
 
 # ─────────────────────────────────────────────────────────────
 # HEADER
-# st.markdown with unsafe_allow_html=True accepts plain HTML. I use it only for the green banner,
-# which Streamlit has no element for. The colours come from the Trenord site, see above.
+# st.markdown with unsafe_allow_html=True accepts plain HTML. I use it only where Streamlit has no
+# element of its own: the width rule above, this green banner and the footer at the end of the page.
+# The colours come from the Trenord site, see above.
 # ─────────────────────────────────────────────────────────────
 
-link_style = "color:white; text-decoration:underline;"
 st.markdown(
     f"""
     <div style="background-color:{TRENORD_GREEN}; border-bottom:6px solid {TRENORD_RED};
-                border-radius:8px; padding:22px 26px; color:white;">
-      <div style="font-size:2rem; font-weight:700; line-height:1.2;">Trenord app reviews: what users say</div>
+                border-radius:8px; padding:22px 26px; margin-bottom:16px; color:white;">
+      <div style="font-size:2rem; font-weight:700; line-height:1.2;">Trenord App Reviews - What Users Say</div>
       <div style="font-size:1.1rem; margin-top:6px;">
-        Google Play reviews in Italian, {first_data_year} to {last_data_year}
-      </div>
-      <div style="font-size:0.95rem; margin-top:12px;">
-        An independent analysis by Paolo Troia ·
-        <a href="{LINKEDIN_URL}" target="_blank" style="{link_style}">LinkedIn</a> ·
-        <a href="{BLOG_URL}" target="_blank" style="{link_style}">Blog</a> ·
-        <a href="{REPO_URL}" target="_blank" style="{link_style}">GitHub</a>
+        {n_italian:,} Google Play reviews in Italian, {first_data_year} to {last_data_year}
       </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
-st.caption("Not affiliated with or endorsed by Trenord.")
-
-# One sentence with the main message, before the numbers
-st.markdown(
-    f"Users rated the app {last_year_row['avg_rating']:.2f} out of 5 stars on average in {last_year}, "
-    f"down from {format_stars(first_year_row['avg_rating'])} in {first_year}. "
-    f"{app_issue_share:.0f}% of the reviews about a specific topic describe a problem with the app itself, "
-    f"and in {last_year} the developer replied to {last_year_row['reply_rate']:.1f}% of the reviews."
-)
 
 # ─────────────────────────────────────────────────────────────
 # KEY NUMBERS
 # st.columns splits the row into side by side columns; on a phone they stack one under the other.
-# st.metric shows a big number with a label. The delta under it gives the context (a comparison
-# with an earlier year or a reference value), and help adds a tooltip with the details.
-# delta_color="off" and delta_arrow="off" make the delta a plain grey note when it is context,
-# not a change.
+# st.metric shows a big number with a label. The delta under it gives the context, here a
+# reference value, and help adds a tooltip with the details.
+# delta_color="off" and delta_arrow="off" make the delta a plain grey note without an arrow: it is
+# a value to compare with, not a change to colour as good or bad.
+# Each number is rounded once into a variable, and both the value and the note use it, so the
+# number on the card and the number in a sentence can never disagree by a rounding.
 # ─────────────────────────────────────────────────────────────
 
-rating_change = last_year_row["avg_rating"] - first_year_row["avg_rating"]
-reply_change = last_year_row["reply_rate"] - peak_reply_row["reply_rate"]
-weighted = validation.loc["weighted_agreement"]
-kappa = validation.loc["cohens_kappa"]
+rating_now = round(last_year_row["avg_rating"], 2)
+rating_then = round(first_year_row["avg_rating"], 2)
+app_issue_share_shown = round(app_issue_share)
+reply_now = round(last_year_row["reply_rate"], 1)
+reply_then = round(first_year_row["reply_rate"], 1)
 
-kpi_1, kpi_2, kpi_3, kpi_4 = st.columns(4)
+kpi_1, kpi_2, kpi_3 = st.columns(3)
 with kpi_1:
     st.metric(
-        label="Reviews analysed",
-        value=f"{n_italian:,}",
-        delta=f"{n_topic_reviews:,} about a specific topic",
+        label=f"Average rating in {last_year}",
+        value=f"{rating_now:.2f} stars",
+        delta=f"{rating_then:.2f} in {first_year}",
         delta_color="off",
         delta_arrow="off",
         border=True,
         help=(
-            f"All Google Play reviews written in Italian, {first_data_year} to {last_data_year}. "
-            f"{n_topic_reviews:,} of them are about one of the {len(topics)} topics; the other "
-            f"{n_excluded:,} only give a generic verdict and are left out of the topic shares."
+            f"Average of all Italian reviews written in {last_year}, from 1 to 5 stars. {last_year} is the "
+            f"last full year; {last_data_year} is still in progress. Only years with at least "
+            f"{MIN_REVIEWS_PER_YEAR} reviews are used, so {first_year} is the first year shown."
         ),
     )
 with kpi_2:
     st.metric(
-        label=f"Average rating in {last_year}",
-        value=format_stars(last_year_row["avg_rating"]),
-        delta=f"{rating_change:+.2f} stars vs {first_year}",
+        label="Reviews about app problems",
+        value=f"{app_issue_share_shown}%",
+        delta=f"of {n_topic_reviews:,} reviews about a specific topic",
+        delta_color="off",
+        delta_arrow="off",
         border=True,
         help=(
-            f"Average of all Italian reviews written in {last_year}, from 1 to 5 stars, compared with "
-            f"{first_year}, the first year with at least {MIN_REVIEWS_PER_YEAR} reviews."
+            f"Share of the {n_topic_reviews:,} reviews about one of the {len(topics)} topics that fall in a "
+            f"topic of the {APP_ISSUE_CATEGORY} category: something in the app does not work, works badly or "
+            f"stopped working. The other {n_excluded:,} Italian reviews only give a generic verdict and are "
+            f"not counted."
         ),
     )
 with kpi_3:
     st.metric(
         label=f"Developer reply rate in {last_year}",
-        value=f"{last_year_row['reply_rate']:.1f}%",
-        delta=f"{reply_change:+.1f} percentage points vs {peak_reply_year}",
-        border=True,
-        help=(
-            f"Share of the Italian reviews of {last_year} that got a reply from the developer. "
-            f"The peak was {peak_reply_row['reply_rate']:.1f}% in {peak_reply_year} "
-            f"(years with at least {MIN_REVIEWS_PER_YEAR} reviews)."
-        ),
-    )
-with kpi_4:
-    st.metric(
-        label="Labels checked by hand",
-        value=f"{weighted['value'] * 100:.1f}%",
-        delta=f"agree with a manual check of {int(weighted['sample_size'])} reviews",
+        value=f"{reply_now:.1f}%",
+        delta=f"{reply_then:.1f}% in {first_year}",
         delta_color="off",
         delta_arrow="off",
         border=True,
         help=(
-            f"I labelled {int(weighted['sample_size'])} reviews myself without seeing the topic. "
-            f"Weighted by topic size, my label and the topic match for {weighted['value'] * 100:.1f}% "
-            f"of the reviews (95% interval {weighted['ci_low'] * 100:.1f}% to {weighted['ci_high'] * 100:.1f}%). "
-            f"Cohen's kappa, the agreement left after removing what chance alone would give, is "
-            f"{kappa['value']:.3f} (95% interval {kappa['ci_low']:.3f} to {kappa['ci_high']:.3f})."
+            f"Share of the Italian reviews of {last_year} that got a reply from the developer. {last_year} "
+            f"is the last full year; {last_data_year} is still in progress. The note shows {first_year}, the "
+            f"first year with at least {MIN_REVIEWS_PER_YEAR} reviews."
         ),
     )
 
@@ -550,8 +543,8 @@ chart_title(
 )
 show_chart(topic_share_chart(topics))
 st.caption(
-    f"Each bar shows the share of the {n_topic_reviews:,} reviews about a specific topic, followed by "
-    f"the average rating of those reviews. Another {n_excluded:,} reviews ({excluded_share:.1f}% of the "
+    f"The shares are based on the {n_topic_reviews:,} reviews about a specific topic. Each bar shows the "
+    f"share of a topic, followed by the average rating of its reviews. Another {n_excluded:,} reviews ({excluded_share:.1f}% of the "
     f"{n_italian:,} Italian reviews) only give a generic verdict, such as a word of praise or blame, "
     "and were set aside."
 )
@@ -705,6 +698,8 @@ with st.container(border=True):
 # ─────────────────────────────────────────────────────────────
 
 raw = validation.loc["raw_agreement"]
+weighted = validation.loc["weighted_agreement"]
+kappa = validation.loc["cohens_kappa"]
 st.subheader("About this analysis")
 st.markdown(
     f"I collected the public Google Play reviews of the Trenord app and kept the "
@@ -735,4 +730,20 @@ st.markdown(
     f"agreement with one reader."
 )
 st.markdown(f"Code, notebooks and full method: [GitHub repository]({REPO_URL}).")
-st.caption("Not affiliated with or endorsed by Trenord.")
+
+# ─────────────────────────────────────────────────────────────
+# FOOTER
+# One small centred line with my name and two links, at the very end of the page.
+# Markdown cannot centre text, so this is a short piece of HTML too.
+# ─────────────────────────────────────────────────────────────
+
+st.markdown(
+    f"""
+    <div style="text-align:center; font-size:0.85rem; color:#6B6B6B; margin-top:32px;">
+      Paolo Troia ·
+      <a href="{LINKEDIN_URL}" target="_blank">LinkedIn</a> ·
+      <a href="{REPO_URL}" target="_blank">GitHub</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)

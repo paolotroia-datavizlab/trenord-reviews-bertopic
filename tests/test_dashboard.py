@@ -21,6 +21,9 @@ analysis_df = pd.read_csv(DATA_DIR / "trenord_reviews_analysis.csv", encoding="u
 REVIEWS_PER_TOPIC = analysis_df["topic_label"].value_counts()
 TOPICS = REVIEWS_PER_TOPIC.index.tolist()  # largest first, as in the dropdown
 
+# Number of key number cards at the top of the page
+N_KPIS = 3
+
 
 def run_app():
     at = AppTest.from_file(str(APP_FILE), default_timeout=TIMEOUT)
@@ -40,20 +43,19 @@ def test_page_renders():
     assert titles == ["What users complain about", "How it changed", "Explore a topic", "About this analysis"]
 
 
-def test_four_kpis_show_values():
+def test_three_kpis_show_values():
     at = run_app()
-    # The first four metrics are the key numbers; the explorer adds four more below them
-    kpis = at.metric[:4]
+    # The first three metrics are the key numbers; the explorer adds four more below them
+    kpis = at.metric[:N_KPIS]
     labels = [kpi.label for kpi in kpis]
-    assert labels[0] == "Reviews analysed"
-    assert labels[1].startswith("Average rating in ")
+    assert labels[0].startswith("Average rating in ")
+    assert labels[1] == "Reviews about app problems"
     assert labels[2].startswith("Developer reply rate in ")
-    assert labels[3] == "Labels checked by hand"
     for kpi in kpis:
         assert kpi.value.strip() != ""
-    # The number of reviews is the number of rows of the labeled file
-    n_italian = len(pd.read_csv(DATA_DIR / "trenord_reviews_labeled.csv", encoding="utf-8-sig"))
-    assert kpis[0].value == f"{n_italian:,}"
+    # The share of app problems is computed from the analysis file, rounded as on the card
+    app_issue_share = (analysis_df["category"] == "App Issue").mean() * 100
+    assert kpis[1].value == f"{round(app_issue_share)}%"
 
 
 def test_topic_options_sorted_by_share():
@@ -66,8 +68,8 @@ def test_explore_topic(topic):
     at = run_app()
     at.selectbox(key="topic").set_value(topic).run()
     assert_no_exception(at)
-    # The explorer metrics follow the four key numbers; the first is the number of reviews
-    assert at.metric[4].value == f"{REVIEWS_PER_TOPIC[topic]:,}"
+    # The explorer metrics follow the key numbers; the first is the number of reviews
+    assert at.metric[N_KPIS].value == f"{REVIEWS_PER_TOPIC[topic]:,}"
 
 
 def test_expanders_open_with_content():
