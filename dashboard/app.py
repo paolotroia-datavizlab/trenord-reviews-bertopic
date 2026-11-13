@@ -75,6 +75,14 @@ CATEGORY_COLORS = {
     "Rail Service": "#CC79A7",
     "App Updates": "#0072B2",
 }
+# st.badge accepts only a few named colours, so each category uses the named colour closest to
+# its colour above. A category missing from this dictionary gets a grey badge.
+CATEGORY_BADGE_COLORS = {
+    "App Issue": "red",
+    "Praise": "green",
+    "Rail Service": "violet",
+    "App Updates": "blue",
+}
 # One colour per star rating: vermillion and orange for the low ratings, grey for 3 stars,
 # light and dark green for the high ratings
 RATING_COLORS = {1: "#D55E00", 2: "#E69F00", 3: "#999999", 4: "#66C5AB", 5: "#009E73"}
@@ -263,7 +271,6 @@ n_topic_reviews = len(topic_reviews)
 n_excluded = int((all_reviews["topic_label"] == EXCLUDED_LABEL).sum())
 excluded_share = n_excluded / n_italian * 100
 app_issue_share = topics[topics["category"] == APP_ISSUE_CATEGORY]["share"].sum()
-n_model_topics = all_reviews["topic"].nunique()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -455,7 +462,7 @@ def topic_share_by_year_chart(years_table, color):
     last_bar_year = years_table["year"].max()
     fig.update_xaxes(title_text="Year", tickvals=years_table["year"].tolist(), showgrid=False,
                      range=[first_bar_year - 1, last_bar_year + 0.6])
-    fig.update_yaxes(title_text="Share of the reviews about a topic (%)", ticksuffix="%",
+    fig.update_yaxes(title_text="Share of reviews (%)", ticksuffix="%",
                      range=[0, years_table["share"].max() * 1.25])
     return style_figure(fig, height=380)
 
@@ -667,20 +674,21 @@ selected_color = CATEGORY_COLORS.get(selected_row["category"], LINE_COLOR)
 # st.container(border=True) draws a frame around everything about the selected topic,
 # so it is clear which part of the page changes with the dropdown
 with st.container(border=True):
-    st.markdown(f"Category: {selected_row['category']}")
+    # st.badge draws the category as a small coloured label, in the named colour closest to the
+    # colour of the category in the charts
+    selected_category = selected_row["category"]
+    st.badge(selected_category, color=CATEGORY_BADGE_COLORS.get(selected_category, "gray"))
 
-    metric_1, metric_2, metric_3, metric_4 = st.columns(4)
+    # Three metrics. There is no reply rate here: one rate over all years would mix the years
+    # with replies to almost every review and the years after 2020 with almost none.
+    metric_1, metric_2, metric_3 = st.columns(3)
     metric_1.metric("Reviews", f"{selected_row['reviews']:,}")
     metric_2.metric("Share of the reviews about a topic", f"{selected_row['share']:.1f}%")
     metric_3.metric(
         "Average rating",
         format_stars(selected_row["avg_rating"]),
-        delta=f"95% interval {selected_row['ci_low']:.2f} to {selected_row['ci_high']:.2f} stars",
-        delta_color="off",
-        delta_arrow="off",
-        help="The range in which the true average most likely lies, given how many reviews the topic has.",
+        help=f"95% confidence interval: {selected_row['ci_low']:.2f} to {selected_row['ci_high']:.2f} stars.",
     )
-    metric_4.metric("Developer reply rate", f"{selected_row['reply_rate']:.1f}%")
 
     selected_keywords = topic_keywords[topic_keywords["topic_label"] == selected_topic]
     selected_keywords = selected_keywords.sort_values("rank")["keyword"].tolist()
@@ -700,13 +708,14 @@ with st.container(border=True):
     chart_left, chart_right = st.columns(2)
     with chart_left:
         peak_row = topic_years.loc[topic_years["share"].idxmax()]
-        chart_title(f"Its share peaked at {peak_row['share']:.1f}% of the reviews about a topic in {int(peak_row['year'])}")
+        chart_title(f"Highest share in {int(peak_row['year'])}: {peak_row['share']:.1f}%")
         show_chart(topic_share_by_year_chart(topic_years, selected_color))
+        # The shares leave out the generic reviews, and their share is not the same every year,
+        # so the caption gives its lowest and highest yearly value
         excluded_shares = excluded_share_per_year(all_reviews, topic_years["year"])
         st.caption(
-            f"Complete years with at least {MIN_REVIEWS_PER_YEAR} reviews about a topic. The share of "
-            f"reviews set aside as generic changes by year ({min(excluded_shares):.1f}% to "
-            f"{max(excluded_shares):.1f}%), so year to year comparisons need care."
+            f"Generic reviews left out vary by year ({min(excluded_shares):.1f}% to "
+            f"{max(excluded_shares):.1f}%), so compare years with care."
         )
     with chart_right:
         star_shares = selected_reviews["rating"].value_counts(normalize=True) * 100
@@ -736,42 +745,24 @@ with st.container(border=True):
 
 # ─────────────────────────────────────────────────────────────
 # ABOUT THIS ANALYSIS
-# Technical terms appear only here, each explained in one sentence.
+# Three short paragraphs: what was done, the limits, where to find the rest. Every number is read
+# from the data files, so the text stays right if the data change.
 # ─────────────────────────────────────────────────────────────
 
-raw = validation.loc["raw_agreement"]
+# The weighted agreement estimates the agreement on all reviews: each group of the sample counts
+# as much as its size in the data
 weighted = validation.loc["weighted_agreement"]
-kappa = validation.loc["cohens_kappa"]
 st.subheader("About this analysis")
 st.markdown(
-    f"I collected the public Google Play reviews of the Trenord app and kept the "
-    f"{n_italian:,} written in Italian. BERTopic, a method that turns each review into a vector of its "
-    f"meaning with a language model and groups reviews whose vectors are close, found {n_model_topics} "
-    f"groups. I read each group with its most typical words (c-TF-IDF, a score of how much more often "
-    f"a word appears in one group than in the others), named it and joined groups about the same "
-    f"theme, ending with {len(topics)} topics. Reviews that only give a generic verdict "
-    f"({n_excluded:,} reviews) were set aside."
+    f"{n_italian:,} Italian reviews from Google Play, grouped into {len(topics)} topics with BERTopic "
+    f"and named by hand. {n_excluded:,} generic reviews like \"great\" or \"terrible\" are left out. "
+    f"A manual check of {int(weighted['sample_size'])} reviews agrees with the topics in "
+    f"{weighted['value'] * 100:.1f}% of cases."
 )
 st.markdown(
-    f"To check the labels, I labelled a sample of {int(raw['sample_size'])} reviews myself, "
-    f"without seeing their topic. The sample was stratified, which means the same number of reviews "
-    f"was drawn from each group, so small topics are checked as well as large ones. My label and the "
-    f"topic match for {raw['value'] * 100:.1f}% of the sample (95% interval {raw['ci_low'] * 100:.1f}% "
-    f"to {raw['ci_high'] * 100:.1f}%), and for {weighted['value'] * 100:.1f}% "
-    f"({weighted['ci_low'] * 100:.1f}% to {weighted['ci_high'] * 100:.1f}%) once each group is weighted "
-    f"by its size, which estimates the agreement on all reviews. Cohen's kappa, the agreement left after "
-    f"removing what chance alone would give, is {kappa['value']:.3f} ({kappa['ci_low']:.3f} to "
-    f"{kappa['ci_high']:.3f}). I also trained the model again with other random seeds for UMAP, the step "
-    f"that compresses the meaning vectors before grouping them, and most reviews kept their label."
+    "Google Play only. Unhappy users write more, so the shares describe reviewers, not all users."
 )
-st.markdown(
-    f"The analysis has limits. The reviews come from Google Play only, not from the App Store. Unhappy users write "
-    f"reviews more often than happy ones, so the shares describe what reviewers write, not the "
-    f"experience of every user. The {excluded_share:.1f}% of reviews that only give a generic verdict "
-    f"are not in the topics. The labels were checked by one person, me, so the check measures "
-    f"agreement with one reader."
-)
-st.markdown(f"Code, notebooks and full method: [GitHub repository]({REPO_URL}).")
+st.markdown(f"Code and full method on [GitHub]({REPO_URL}).")
 
 # ─────────────────────────────────────────────────────────────
 # FOOTER
