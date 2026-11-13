@@ -53,14 +53,18 @@ flowchart TD
     N07 --> TOP[("top_reviews_per_topic.csv")]
     N07 --> FINAL[("bertopic_model_merged<br/>local only")]
     N07 --> PNG2["four charts in reports/figures"]
+    N07 --> KW[("topic_keywords.csv")]
     CLEAN --> N08["08 label validation"]
     LAB --> N08
     N08 --> STAB["stability and agreement tables"]
     N08 --> SAMPLE[("validation_sample.xlsx, validation_key.csv,<br/>validation_disagreements.csv<br/>labeling/, local only")]
     N08 --> PNG3["chart_label_confusion.png<br/>reports/figures"]
+    N08 --> VS[("validation_summary.csv")]
     LAB --> DASH["dashboard/app.py, Streamlit"]
     ANA --> DASH
     TOP --> DASH
+    KW --> DASH
+    VS --> DASH
 ```
 
 ### Produced files
@@ -80,11 +84,13 @@ in its section below.
 | `trenord_reviews_topics.csv` | 06 | no |
 | `bertopic_model_trained/` | 06 | no |
 | `trenord_reviews_labeled.csv`, `trenord_reviews_analysis.csv`, `top_reviews_per_topic.csv` | 07 | yes |
+| `topic_keywords.csv` (top 5 keywords of each topic, for the dashboard) | 07 | yes |
 | `bertopic_model_merged/` | 07 | no |
 | `reports/figures/chart_reviews_per_topic.png`, `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`, `chart_topic_priority.png` | 07 | yes |
 | `labeling/validation_sample.xlsx`, `labeling/validation_key.csv` (written only once, §10) | 08 | no (gitignored, contain review texts) |
 | `labeling/validation_disagreements.csv` (written again on every run, §10) | 08 | no (gitignored, contains review texts) |
 | `reports/figures/chart_label_confusion.png` | 08 | yes |
+| `validation_summary.csv` (agreement numbers, for the dashboard) | 08 | yes |
 
 All CSVs are written with `encoding="utf-8-sig"` and `index=False`.
 
@@ -286,10 +292,8 @@ count as the same word.
 
 ### Input and output
 - Input: `trenord_reviews_anon.csv`.
-- Output:
-  - `trenord_reviews_clean.csv`, which adds
-    `year, month, day_of_week, year_month, language, text_clean, word_count, text_lemmatized`;
-  - `dashboard/stopwords_it.txt`, the stopword list used by the dashboard.
+- Output: `trenord_reviews_clean.csv`, which adds
+  `year, month, day_of_week, year_month, language, text_clean, word_count, text_lemmatized`.
 
 ### Method
 1. Load the anonymised file (cell 2).
@@ -304,9 +308,7 @@ count as the same word.
    shared texts and of all Italian reviews. Counts only (cell 6). A markdown cell explains the result (cell 7).
 6. [Lemmatize](glossary.md#lemmatization) with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
    is alphabetic, is not one of the [stopwords](glossary.md#stopwords) and has a lemma longer than 2 characters (cell 8).
-7. Export spaCy's Italian `STOP_WORDS` to `dashboard/stopwords_it.txt`: a header comment, then one word per line,
-   sorted, UTF-8 (cell 9).
-8. Save (cell 10).
+7. Save (cell 9).
 
 ### Parameters
 
@@ -320,7 +322,8 @@ count as the same word.
 - **Two-level language detection.** A single threshold was rejected: a strict one discards short Italian reviews,
   and a loose one admits other languages at low confidence.
 - **Two text versions.** `text_clean` keeps natural word order for the [embeddings](glossary.md#embedding) (05, 06);
-  `text_lemmatized` groups word variants for frequency analyses (dashboard).
+  `text_lemmatized` groups word variants. The dashboard used it for its word analysis until 2026-11-13; no later
+  step reads it now, and the column stays in the published files.
 
 ### Validation (final run)
 - The language split is in Key numbers.
@@ -331,6 +334,8 @@ count as the same word.
   6,341 distinct `text_clean`. 743 reviews share their cleaned text with at least one other review, in 133 groups.
   Their median length is 2 words, against 14 for all Italian reviews. They are kept, because each one is a separate
   review with its own rating and date.
+- Rerun of 2026-11-13 in a fresh kernel, 69 s, after the cell that exported the stopword list for the dashboard
+  was removed, with its import: `trenord_reviews_clean.csv` is byte-identical to the previous run.
 
 ### Known limitations
 - The 378 non-Italian or undetermined reviews are not analysed further.
@@ -790,6 +795,9 @@ with the results and a short list of recommendations.
   - `trenord_reviews_analysis.csv`: EXCLUDE rows removed.
   - `top_reviews_per_topic.csv` (`topic_label, category, rating, thumbs_up, date, text`): the 5 most upvoted reviews
     with at least one upvote, for each of the 12 topics.
+  - `topic_keywords.csv` (`topic_label, rank, keyword`): the top 5 keywords of each of the 12 topics, from the
+    merged model, the same words as `chart_keywords_per_topic.png`. The dashboard reads them, because it does not
+    load the model. Keywords only, no review texts.
   - `bertopic_model_merged/`: the model after the merges.
   - Four charts in `reports/figures/`, saved with `dpi=150`: `chart_reviews_per_topic.png`,
     `chart_avg_rating_per_topic.png`, `chart_keywords_per_topic.png`, `chart_topic_priority.png`.
@@ -816,8 +824,9 @@ topics.
 7. Build the final topics table with 95% confidence intervals and the category table (cell 12).
 8. Draw the four charts, each followed by how to read it (cells 13-20).
 9. Run the two bias checks (cells 21-22), read in cell 23.
-10. Save the outputs (cell 24) and check the saved files (cells 25-26). The results are summarised in cell 27 and
-    the recommendations in cell 28.
+10. Save the outputs (cell 24) and check the saved files (cells 25-26).
+11. Save the keywords for the dashboard and check them (cell 27). The results are summarised in cell 28 and the
+    recommendations in cell 29.
 
 ### Topic overview table
 One row per 06 topic with what was looked at to label it. Review texts are not shown, because notebook outputs are
@@ -982,10 +991,12 @@ All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cate
 | Every review found in clean.csv, `reply_text` identical | PASS |
 | 12 labels and the 4 categories in analysis.csv, no EXCLUDE rows | PASS |
 | No two topic names overlap on `chart_topic_priority.png` | PASS (0 overlaps) |
+| Every keyword of `topic_keywords.csv` made of letters only, so no code | PASS (60 keywords) |
+| No keyword is a personal name (read by hand: words such as "treni", "biglietti", "milano", "italia") | PASS |
 
 ### Recommendations
 
-Cell 28 turns the results into five recommendations. They come from what reviewers write. People who are unhappy
+Cell 29 turns the results into five recommendations. They come from what reviewers write. People who are unhappy
 tend to write more, so the shares describe what reviewers complain about, not the experience of every user. All App
 Issue topics have average ratings between 1.40 and 1.78 stars with overlapping confidence intervals, so the order
 follows how often each problem is mentioned, not how severe it is. Once topics over time are analysed, the order
@@ -1072,7 +1083,8 @@ Both are local only and gitignored.
 08 checks the 12 labels of 07 in three parts. Part 1 trains the model of 06 again with other UMAP seeds and
 measures how many reviews keep their label. Part 2 draws a sample of reviews for
 [blind coding](glossary.md#blind-coding) by hand. Part 3 compares my coding of the sample with the model labels. It
-changes no label and writes nothing in `data/processed/`.
+changes no label. In `data/processed/` it writes only `validation_summary.csv`, the agreement numbers the dashboard
+shows.
 
 The sample was drawn and coded when 07 still had 13 labels. Eight of them were renamed afterwards, two of them into
 the same name, Station Issues (§9). My coding, the codebook and the key keep the names of that time, and 08 maps them to the
@@ -1089,6 +1101,9 @@ current names in code, without editing the files in `labeling/`.
   - `validation_sample.xlsx` and `validation_key.csv`, written only if `validation_sample.xlsx` does not exist
     yet, so a rerun never overwrites the coding;
   - `validation_disagreements.csv`, written again on every run from the other two.
+- Output for the dashboard: `data/processed/validation_summary.csv`, one row per measure (`raw_agreement`,
+  `cohens_kappa`, `weighted_agreement`) with `value`, `ci_low`, `ci_high` and `sample_size`. Numbers only, no labels
+  of single reviews and no texts.
 
 ### Method
 1. Load both files and check that they list the same reviews (cell 3). Prepare the texts as in 06 (cell 4).
@@ -1111,11 +1126,12 @@ current names in code, without editing the files in `labeling/`.
    stratum of the review (cell 27).
 10. Compute the raw agreement and [Cohen's kappa](glossary.md#cohens-kappa) on the sample (cell 29), and the
     weighted agreement on all reviews (cell 31).
-11. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 33-34).
-12. Compute the [precision](glossary.md#precision) of each label (cell 36), the
-    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 38-39) and the five most frequent
-    disagreements (cell 40).
-13. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 42).
+11. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 33-34), and save
+    the three numbers with their intervals and the sample size to `validation_summary.csv` (cell 35).
+12. Compute the [precision](glossary.md#precision) of each label (cell 37), the
+    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 39-40) and the five most frequent
+    disagreements (cell 41).
+13. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 43).
 
 ### Parameters
 | Parameter | Value |
@@ -1253,7 +1269,7 @@ percentile of the 2,000 values.
 | Weighted agreement | all 6,951 reviews | 86.6% | 81.7% to 91.2% |
 
 The precision of a label is the share of the sampled reviews the model put in it to which I gave the same label
-(cell 36). For 11 labels and EXCLUDE the label is one stratum, and the precision is the simple share of its 14
+(cell 37). For 11 labels and EXCLUDE the label is one stratum, and the precision is the simple share of its 14
 reviews. Station Issues is two strata with very different sizes, 173 and 71 reviews. A simple share of its 28 reviews
 would give the smaller one too much weight, so its precision is the share inside each stratum, weighted by the
 number of reviews of that stratum in `trenord_reviews_labeled.csv`. The column "Confirmed" is a plain count for
@@ -1279,7 +1295,7 @@ every label.
 
 ![Confusion matrix of my labels and the model labels](../reports/figures/chart_label_confusion.png)
 
-`chart_label_confusion.png` (cell 39): my labels in the rows, the model labels in the columns, both in the order of
+`chart_label_confusion.png` (cell 40): my labels in the rows, the model labels in the columns, both in the order of
 the stability table and with the current names, with None of these as the last row: 14 rows and 13 columns. Each
 cell counts the sampled reviews with that pair of labels; empty cells are 0. The diagonal holds the 162 agreements;
 every cell off the diagonal is a disagreement. The colour goes from white to dark blue as the count grows. Each
@@ -1294,7 +1310,7 @@ column adds up to 14, except Station Issues, which adds up to 28.
 | Poor Usability → Train Service Complaints | 2 |
 
 The 34 disagreements fall in 22 pairs of labels. The table shows the five most frequent; a sixth pair, None of these
-→ Easy Purchases, also has 2 reviews and is left out only by the order of the table (cell 40). 13 disagreements are
+→ Easy Purchases, also has 2 reviews and is left out only by the order of the table (cell 41). 13 disagreements are
 reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 
 #### Reading the agreement
@@ -1313,7 +1329,7 @@ reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 - Station Issues joins two topics that were hard to tell apart. Every review I coded as a station issue is a station
   issue for the model too, and 19 of its 28 sampled reviews are confirmed; the other 9 go to five different labels,
   4 of them to EXCLUDE and 2 to Ticket Purchase Failures. Its precision, weighted over its two strata, is 78.3%.
-- `validation_disagreements.csv` (cell 42) holds the 34 disagreements with `sample_id`, text, my label and model
+- `validation_disagreements.csv` (cell 43) holds the 34 disagreements with `sample_id`, text, my label and model
   label, to study them. It is not published.
 
 ### Design decisions
@@ -1356,6 +1372,12 @@ reviews I coded EXCLUDE and 5 are reviews I coded None of these.
     as before (cell 20, same texts and ids);
   - `validation_sample.xlsx` and `validation_key.csv` have the same SHA-256 hash before and after the run;
   - the labels that were only renamed keep the same stability shares as in the previous run.
+- Rerun of 2026-11-13 in a fresh kernel with the `venv_trenord` kernel, 447 s, after the cell that saves
+  `validation_summary.csv` was added:
+  - every output of the previous run is unchanged, the confusion matrix chart is byte-identical, and the three files
+    in `labeling/` have the same SHA-256 hash before and after the run;
+  - `validation_summary.csv` holds the numbers printed above: 82.7%, 0.812 and 86.6%, with their intervals, on 196
+    reviews.
 - A first attempt with the kernel named `python3` started the system Python instead of the venv, and seed 42 gave
   different topics. The notebook must run in the `venv_trenord` kernel, the environment of the lock file.
 - `labeling/` is gitignored, and none of its files is tracked or staged.
@@ -1384,105 +1406,152 @@ reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 
 ## 11. Dashboard
 
-**In plain words.** The dashboard is a web page that shows the results interactively. Readers can filter by year,
-star rating and category, look at one theme in detail, and see which words appear most in negative reviews.
+**In plain words.** The dashboard is a single web page that tells the results in order of importance, for a reader
+who has never seen the project: who wrote what, how it changed, and how far the labels can be trusted. Every number
+on it is computed from the published files when the page loads.
+
+### Layout
+One scrolling page, `dashboard/app.py`, from top to bottom:
+1. **Header.** A banner in Trenord green with the title "Trenord app reviews: what users say", the subtitle "Google
+   Play reviews in Italian, 2015 to 2026" (first and last year from the data) and the byline "An independent
+   analysis by Paolo Troia" with links to LinkedIn, the blog and the repository. Under it: "Not affiliated with or
+   endorsed by Trenord."
+2. **One sentence with the main message**, computed: the average rating of the last complete year against the first,
+   the share of App Issue reviews and the reply rate of the last complete year.
+3. **Four key numbers** (`st.metric`, one row), each with its context in the delta and the details in the help
+   tooltip: reviews analysed, average rating, developer reply rate, labels checked by hand.
+4. **What users complain about.** A horizontal bar chart of the 12 topics by share of the analysed reviews, largest
+   first, coloured by category, with share and average rating written next to each bar. A caption says what the
+   shares are based on and how many reviews were set aside. An expander, "Show the full table", holds label,
+   category, reviews, share, average rating, 95% confidence interval and reply rate.
+5. **How it changed.** One chart with two panels on the same year axis: average rating per year and developer reply
+   rate per year, on all Italian reviews. The caption says that the two lines move together but that this does not
+   show that one caused the other.
+6. **Explore a topic.** A dropdown with the 12 topics, sorted by share. Inside a frame: four small metrics (reviews,
+   share, average rating with its 95% interval, reply rate), the 5 keywords of the topic, its share of the analysed
+   reviews per year, its rating distribution and its most upvoted reviews in expanders, the first one open.
+7. **About this analysis.** Three short paragraphs (method, reliability of the labels with the numbers, limits), the
+   link to the repository and the disclaimer again.
+
+The main view, everything above "Explore a topic", has seven visual elements: the banner, the four key number cards,
+the topic chart and the trend chart. The full table stays closed in its expander. Technical terms (BERTopic,
+c-TF-IDF, Cohen's kappa, UMAP, stratified sample) appear only in the help tooltips and in "About this analysis", each
+explained in one sentence.
 
 ### Data files read
-Paths are built from `Path(__file__).parent.parent / "data" / "processed"`.
-- `trenord_reviews_analysis.csv`: informative reviews, used by most views and by the filters.
-- `trenord_reviews_labeled.csv`: all Italian reviews, used for reply rates and rating trends.
-- `top_reviews_per_topic.csv`: shown in Deep Dive.
-- `dashboard/stopwords_it.txt`: the 624 Italian stopwords of spaCy 3.8.14, exported by notebook 03 (§5).
-  - **Regenerate:** rerun notebook 03, which rewrites the file. The app skips lines starting with `#`.
-  - **Why a static export:** lightweight stopword libraries have different Italian lists, which would make the
-    Words tab inconsistent with the notebooks. The export keeps the dashboard on the pipeline's exact list without
-    installing spaCy.
+Paths are built from `Path(__file__).parent.parent / "data" / "processed"`. Each file is read once and kept in
+memory with `st.cache_data`.
+- `trenord_reviews_labeled.csv` (07): all 6,951 Italian reviews, the generic ones (`EXCLUDE`) included. Used for
+  the review count, the yearly rating and reply rate, the share of excluded reviews and the number of topics found
+  by the model.
+- `trenord_reviews_analysis.csv` (07): the 5,998 reviews of the 12 topics. Used for the topic chart, the full table
+  and the explorer.
+- `top_reviews_per_topic.csv` (07): the most upvoted reviews of each topic.
+- `topic_keywords.csv` (07): the top 5 keywords of each topic (§9).
+- `validation_summary.csv` (08): raw agreement, Cohen's kappa and weighted agreement with their 95% intervals and
+  the sample size (§10).
 
-### Filters
-- Sidebar filters: a year range slider, one checkbox per star rating and one per category.
-- Categories are read from the data, so the filter shows exactly App Issue, App Updates, Praise and Rail Service.
-- Unchecking every rating or every category falls back to all of them.
-- When the filters return no rows, each tab shows an information message.
+### How each number is computed
+"Trend years" are the complete years with at least `MIN_REVIEWS_PER_YEAR = 30` reviews in
+`trenord_reviews_labeled.csv`. The last complete year is the year of the latest review if that review is dated
+31 December, otherwise the year before. Every year from 2015 to 2025 is a trend year (minimum 154 reviews); 2026 is
+incomplete.
 
-### Incomplete year and minimum yearly sample
-- **Last complete year.** It is the year of the latest review if that review is dated 31 December, otherwise the
-  year before (here 2025).
-- **Minimum yearly sample.** Yearly averages and rates use only complete years with at least
-  `MIN_REVIEWS_PER_YEAR = 30` reviews in the data being plotted. This applies to:
-  - the trends and peaks in Key Findings;
-  - the reply-rate chart;
-  - the rating and reply [sparklines](glossary.md#sparkline);
-  - the per-topic trend in the priority table, where each topic-year needs at least 30 reviews.
-- The threshold is stated in a caption next to each of these. Yearly counts are shown for every complete year.
-- For all Italian reviews every year from 2015 to 2025 meets the threshold (minimum 154 reviews), so Key Findings
-  are unaffected. For the smallest topics, some or all topic-years fall below it.
+| Number | How it is computed | Value at this snapshot |
+|---|---|---|
+| Reviews analysed | rows of `trenord_reviews_labeled.csv`; delta: rows of `trenord_reviews_analysis.csv` | 6,951; 5,998 about a specific topic |
+| Average rating | mean `rating` of the last trend year; delta against the first trend year | 1.52 stars in 2025; -2.03 stars vs 2015 (3.54) |
+| Developer reply rate | mean of `has_reply` in the last trend year; delta against the trend year with the highest rate | 1.7% in 2025; -98.3 percentage points vs 2016 (100.0%) |
+| Labels checked by hand | `weighted_agreement` of `validation_summary.csv`; kappa and both intervals in the tooltip | 86.6% (95% CI 81.7% to 91.2%); kappa 0.812 (0.763 to 0.862) |
+| App Issue share in the opening sentence | sum of the shares of the App Issue topics, rounded | 85% (84.9%) |
+| Topic share | reviews of the topic / reviews of the 12 topics | from 25.0% (Inaccurate Train Info) to 1.4% (Improvement Feedback) |
+| Average rating of a topic and its 95% interval | mean ± t(0.975, n-1) · s / √n, as in 07 | Inaccurate Train Info 1.78 stars (1.72 to 1.84) |
+| Reply rate of a topic | mean of `has_reply` over the topic reviews | Inaccurate Train Info 48.4% |
+| Reviews set aside | `EXCLUDE` rows / all Italian reviews | 953, 13.7% |
+| Excluded share per year (explorer caption) | `EXCLUDE` share of each year shown in the explorer chart, lowest and highest | 7.4% (2017) to 23.8% (2020) |
+| Topic share per year (explorer chart) | share of the analysed reviews of each trend year with at least 30 analysed reviews | every year 2015-2025 |
+| Topics found by the model (About) | distinct `topic` values in `trenord_reviews_labeled.csv` | 30 |
+
+The chart titles are computed too: the topic chart names the largest App Issue or Rail Service topic ("Inaccurate
+Train Info is the most common complaint, in 25.0% of the reviews about a topic"), the trend chart the first and last
+trend year and the reply peak, and the explorer charts the peak year of the topic and its most common rating.
+
+### Theme and brand colours
+`.streamlit/config.toml` sets the theme; Streamlit reads it at start, and Streamlit Cloud reads the same file from
+the repository:
+
+| Setting | Value |
+|---|---|
+| `base` | `light` |
+| `primaryColor` | `#006633` |
+| `backgroundColor` | `#FFFFFF` |
+| `secondaryBackgroundColor` | `#F2F4F3` |
+| `textColor` | `#262730` |
+| `font` | `sans-serif` |
+
+The two brand colours come from trenord.it, checked on 2026-11-13:
+- **Trenord green `#006633`**: the background of the header bar of the site, the rule
+  `.header-top .background-top{background-color:#006633}` in its merged stylesheet; the same colour is used by the
+  sticky menu and the side navigation.
+- **Trenord red `#D71920`**: the colour of the red mark in the logo image
+  `https://www.trenord.it/fileadmin/templates/img/header/logo-top-trenord.png`, sampled from the image. Apart from
+  white, it is the only opaque colour of the logo (1,060 pixels). The site CSS uses other reds, such as `#d20019`,
+  for single elements; the logo colour was chosen.
+
+The brand colours are used only for the interface: the green banner, its red bottom border and the primary colour
+of the widgets. The logo is not used. The data keep the [Okabe-Ito](glossary.md#okabe-ito-palette) colours of the
+notebooks: App Issue `#D55E00`, Praise `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`, and from 1 to 5
+stars `#D55E00`, `#E69F00`, `#999999`, `#66C5AB`, `#009E73`. The yearly lines carry no category, so they are dark
+grey `#4A4A4A`, and the incomplete year is a lighter grey `#9B9B9B` with a dashed line.
+
+### Charts
+- All charts are Plotly, drawn with `theme=None` so the style is the one set in the app: white background, light
+  grid `#E6E6E6`, flat colours, the same font size (13) everywhere, no toolbar.
+- Every value is also written as text, so colour is never the only way to read it: share and average rating next
+  to each topic bar, the category in the legend, the hover text and the full table.
+- Chart titles are written above each chart with `st.markdown`, because Markdown wraps on a phone and a Plotly title
+  does not. Every axis has a label with its unit.
+- On the topic chart the topic names are written above the bars instead of on the axis, so the bars keep their width
+  on a phone.
+- On the yearly charts only some points carry their value, so the labels never touch on a phone: the peak, the first
+  year, the last year and the lowest point, skipping a point next to one already labelled. Hovering shows every
+  value.
+- The incomplete year 2026 is shown as a dashed grey segment and named in the legend ("2026, partial year").
+- The page was checked at 1,440 and 390 pixels wide in headless Chrome.
 
 ### Parameters
 
 | Parameter | Value | Why |
 |---|---|---|
 | `MIN_REVIEWS_PER_YEAR` | 30 | So that peaks and trends are not driven by a handful of reviews; a common rule-of-thumb sample size, not tuned. |
-| Critical words: minimum negative mentions | 10 | Filters out rare words; set by hand. |
-| Critical words: smoothing constant | 0.001 | Prevents division by zero for words absent from positive reviews; set by hand. |
+| `FONT_SIZE` | 13 | One size for ticks, labels, values and legends, readable on a phone. |
+| Labelled yearly points | peak, first, last, lowest | Enough to read the trend without labels touching at 390 pixels. |
 
-### Tabs
-1. **Overview.**
-   - Key Findings, computed at every run and not affected by the filters:
-     - top app issue: the App Issue topic with the most reviews, with its average rating;
-     - average rating in the first vs the last qualifying year (Italian reviews);
-     - peak reply rate vs the rate in the last qualifying year (Italian reviews);
-     - largest Praise topic, with size and average rating.
-   - KPI cards with sparklines. Review count and average rating follow the filters; the reply rate covers all
-     Italian reviews, as its help text says.
-   - Rating breakdown, rating distribution and average rating over time.
-2. **Topics.**
-   - Key findings that follow the filters: most critical App Issue topic, share of App Issue reviews, most discussed
-     topic, best-rated topic.
-   - A priority table with category, average rating, review count, yearly rating trend and reply rate.
-   - The reply rate over time for all Italian reviews.
-3. **Deep Dive.** For one topic:
-   - its category badge;
-   - KPI cards with sparklines, all following the filters;
-   - rating distribution and rating trend;
-   - its most upvoted reviews.
-4. **Words.**
-   - Most frequent lemmas in 1-2★ reviews, as a bar chart and a word cloud.
-   - Critical words ranked by a [normalized frequency ratio](glossary.md#normalized-frequency-ratio),
-     `score = (freq_neg / n_neg) / (freq_pos / n_pos + 0.001)`, with a yearly trend for the top 5.
-
-Each category has its own emoji and badge colour: App Issue red, Praise green, Rail Service violet, App Updates blue.
-Streamlit accepts only named colours there, so these are the closest to the category colours of the 07 charts. The
-star ratings use the same 1-5 scale as notebook 04, and the main line colour is the same blue `#0072B2`.
-
-### Key Findings at this snapshot
-- **Top app issue:** Inaccurate Train Info (1,501 reviews, 1.78★).
-- **Average rating:** fell from 3.54★ (2015) to 1.52★ (2025).
-- **Reply rate:** peaked at 100% (2016); 2% in 2025.
-- **Largest Praise topic:** Ease of Use (463 reviews, 4.54★).
+### Disclaimer
+This is an independent analysis of public reviews. The page says "Not affiliated with or endorsed by Trenord." under
+the banner and again at the end. The brand colours only make the subject recognisable; the logo is not used.
 
 ### Design decisions
-- **Normalized frequency ratio instead of differential TF-IDF.** The score reads directly as "x times more frequent
-  in negative reviews". It corrects for the different number of negative and positive reviews, and needs only a
-  small smoothing constant. Differential TF-IDF was rejected as less interpretable.
-- **Everything shown is computed from the data.** This covers the Key Findings, the incomplete-year cutoff and the
-  category filters. A "most discussed topic" card was replaced by the largest Praise topic, because it duplicated
-  "top app issue".
-- **No spaCy at runtime.** A static stopword list replaces the spaCy import, so the deployed app has fewer
-  dependencies.
-- **Shared code.** Helpers draw the rating distribution, rating trend and reply-rate charts; shared constants define
-  colours and category styles.
+- **One page instead of tabs and filters.** The earlier version had four tabs and sidebar filters. A reader had to
+  click to find the message; now the header and the key numbers give it in a few seconds, and the explorer keeps the
+  detail for whoever wants it.
+- **No word analysis.** The Words tab (frequent words, critical words, word cloud) was removed on 2026-11-13, with
+  its functions, `dashboard/stopwords_it.txt`, the cell of 03 that exported it and the `wordcloud` package. The
+  topics and their keywords already say what the reviews are about, so the page keeps only them.
+- **Only the files of the pipeline.** The keywords and the agreement numbers are read from two small CSVs written by
+  07 and 08, never copied by hand. The app does not load the model, so the dashboard needs only streamlit, pandas,
+  plotly and scipy (`requirements.txt`). scipy gives the t distribution of the confidence intervals, the same as 07.
 
 ### Validation
-A [smoke test](glossary.md#smoke-test) with `streamlit.testing.v1.AppTest` ran 17 scenarios with no exceptions and
-all 4 tabs rendered:
-- default filters;
-- each of the 12 Deep Dive topics;
-- zero rows (2015, 1★, App Updates);
-- only the incomplete year 2026;
-- Praise only (no App Issue topics);
-- 5★ only (no negative reviews).
+`tests/test_dashboard.py` runs the app with `streamlit.testing.v1.AppTest` in 16
+[smoke tests](glossary.md#smoke-test), all passing:
+- the page renders without exceptions, with its four sections in order;
+- the four key numbers show a value, and the first is the number of Italian reviews;
+- the dropdown lists the 12 topics sorted by share;
+- each of the 12 topics can be selected without exceptions, and the explorer shows its number of reviews (12 tests);
+- the expanders hold their content: the full table with 12 rows, and the text of each upvoted review.
 
-The scenarios are in `tests/test_dashboard.py`, one pytest test each.
+AppTest cannot click an expander, so the last test checks that the content inside each expander is rendered.
 
 ---
 
@@ -1490,8 +1559,8 @@ The scenarios are in `tests/test_dashboard.py`, one pytest test each.
 
 **Run order.** 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08, then the dashboard. In normal use 01 is **not** rerun,
 because it would make a new snapshot. 05 only compares settings and saves nothing, so it can be skipped. It reads
-only `trenord_reviews_clean.csv`. 08 needs the output of 07 and writes only to `labeling/`, which the dashboard
-does not read, and one chart to `reports/figures/`. Its coding files are written only once (§10). It must run in
+only `trenord_reviews_clean.csv`. 08 needs the output of 07. It writes its coding files to `labeling/`, which the
+dashboard does not read, one chart to `reports/figures/` and `validation_summary.csv`, which the dashboard reads. Its coding files are written only once (§10). It must run in
 the `venv_trenord` kernel.
 
 **Environment.**
@@ -1549,6 +1618,11 @@ added and the markdown of every notebook was shortened. The three published CSVs
 are byte-identical to the previous commit; `chart_topic_priority.png` is new. The other notebooks changed only in
 their markdown and were not rerun.
 
+**Rerun of 2026-11-13.** 07 and 08 were rerun in a fresh kernel after each got a cell that saves a small file for the
+dashboard, `topic_keywords.csv` and `validation_summary.csv`, and 03 after its stopword export was removed. The
+three published CSVs of 07, `trenord_reviews_clean.csv`, every chart and the files in `labeling/` are
+byte-identical to the previous run.
+
 **Deterministic steps.**
 - 02, given the same raw file and key.
 - 03, for fixed library versions.
@@ -1584,6 +1658,7 @@ They cannot regenerate the published topics and labels exactly without the origi
 | Manual labeling notes, the validation sample of 08 with its key and the disagreements file (`labeling/`, contain review texts) | local only, gitignored |
 | Secret key (`.env`) | local only, gitignored and never committed; rotated on 2026-11-02; `.env.example` holds a placeholder |
 | Labeled, analysis and top-reviews CSVs | published: review text, rating, date, app version and developer reply; no author, pseudonymised id |
+| `topic_keywords.csv`, `validation_summary.csv` | published: keywords and agreement numbers only, no review text |
 | Charts | published (aggregates only) |
 
 **Pseudonymization.**
@@ -1616,7 +1691,8 @@ added, found none either, and so did a scan of 07 and 08 after the labels were r
 
 ## 15. Data dictionary
 
-The three published CSVs in `data/processed/`, written by 07 with `encoding="utf-8-sig"` and `index=False`.
+The five published CSVs in `data/processed/`: three review files and `topic_keywords.csv` written by 07,
+`validation_summary.csv` written by 08, all with `encoding="utf-8-sig"` and `index=False`.
 Types are as read by `pandas.read_csv`. "Empty" means an empty cell, read as `NaN`. Columns that hold review or
 reply text, or text derived from it, have no example values.
 
@@ -1642,7 +1718,7 @@ All Italian reviews: 6,951 rows, 21 columns, one row per review.
 | `language` | string | Language detected by lingua (§5). Always `it` in this file. | `it` |
 | `text_clean` | string | Lowercased text without URLs, symbols and extra spaces (§5). Input to BERTopic (§8). | - |
 | `word_count` | int | Number of words in the original `text`, 1-278. | `17`, `45`, `63` |
-| `text_lemmatized` | string | Lemmas without stopwords (§5), used by the dashboard's Words tab. Empty when no token survives (49 rows). | - |
+| `text_lemmatized` | string | Lemmas without stopwords (§5). Not read by the dashboard. Empty when no token survives (49 rows). | - |
 | `topic` | int | Topic id of the 06 BERTopic model, 0-29 (§8). | `0`, `2`, `22` |
 | `topic_label` | string | One of the 12 topic labels, or `EXCLUDE` for topics without specific content (§9). | `Ticket Purchase Failures`, `Ease of Use`, `EXCLUDE` |
 | `category` | string | Category of the label: `App Issue`, `Praise`, `Rail Service` or `App Updates` (§9). Empty for `EXCLUDE` rows (953 rows). | `App Issue`, `Praise`, `Rail Service` |
@@ -1679,8 +1755,8 @@ This is the main file of the dashboard.
 
 ### `top_reviews_per_topic.csv`
 
-The 5 most upvoted reviews with at least one upvote for each of the 12 topics, shown in Deep Dive: 60 rows,
-6 columns.
+The 5 most upvoted reviews with at least one upvote for each of the 12 topics, shown in the topic explorer of the
+dashboard: 60 rows, 6 columns.
 
 | Column | Type | Description | Example values |
 |---|---|---|---|
@@ -1690,3 +1766,27 @@ The 5 most upvoted reviews with at least one upvote for each of the 12 topics, s
 | `thumbs_up` | int | Helpful votes, 1-87; the ranking key within each topic. | `23`, `53`, `64` |
 | `date` | string | Review date and time, `YYYY-MM-DD HH:MM:SS`. | `2021-09-15 06:12:06`, `2023-07-02 17:12:43` |
 | `text` | string | Review text, with ticket-like codes masked. | - |
+
+### `topic_keywords.csv`
+
+The top 5 keywords of each of the 12 topics, from the merged model of 07: 60 rows, 3 columns. Read by the topic
+explorer of the dashboard.
+
+| Column | Type | Description | Example values |
+|---|---|---|---|
+| `topic_label` | string | Topic label, 5 rows each, largest topic first. | `Inaccurate Train Info`, `Station Issues` |
+| `rank` | int | Position of the keyword in its topic, 1-5; 1 is the most typical. | `1`, `5` |
+| `keyword` | string | One word or a bigram, in Italian, letters only. | `treni`, `acquistare biglietti`, `login` |
+
+### `validation_summary.csv`
+
+The agreement between my blind coding and the model labels (§10): 3 rows, 5 columns. Read by the key numbers and
+"About this analysis" of the dashboard.
+
+| Column | Type | Description | Example values |
+|---|---|---|---|
+| `measure` | string | `raw_agreement`, `cohens_kappa` or `weighted_agreement`. | `cohens_kappa` |
+| `value` | float | The measure; the two agreements are shares between 0 and 1. | `0.826530612244898`, `0.8121546961325967` |
+| `ci_low` | float | Lower end of the 95% bootstrap interval. | `0.7627118644067796` |
+| `ci_high` | float | Upper end of the 95% bootstrap interval. | `0.8616053776196125` |
+| `sample_size` | int | Reviews in the coded sample. | `196` |

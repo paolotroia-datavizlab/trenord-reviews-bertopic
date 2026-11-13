@@ -1,0 +1,16 @@
+# Streamlit theme for the dashboard.
+# Streamlit reads this file when it starts from the repository root, and Streamlit Cloud reads
+# the same file from the repository, so the page looks the same locally and online.
+
+[theme]
+# Start from the light theme, so the page does not turn dark when the browser is in dark mode
+base = "light"
+# Trenord green, from the header bar of trenord.it: Streamlit uses it for the active parts of the widgets
+primaryColor = "#006633"
+# White page, with a light grey for the background of widgets such as the dropdown
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F3"
+# Dark grey text, easier on the eyes than pure black on white
+textColor = "#262730"
+# A plain sans-serif font, readable on small screens
+font = "sans-serif"

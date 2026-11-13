@@ -135,7 +135,7 @@ Notebook 03 accepts Italian at any confidence and other languages only at 0.5 or
 
 ## Lemmatization
 Reducing each word to its dictionary form, for example a conjugated verb to its infinitive.
-It groups word variants in the frequency analyses of the dashboard.
+Notebook 03 stores the lemmas of each review in `text_lemmatized`.
 
 ## Lock file
 A list of every installed package with its exact version, including the indirect dependencies that a
@@ -153,11 +153,6 @@ changes only the keywords, not which reviews belong to which topic. Here `min_df
 A method that selects keywords that are relevant to a topic but not redundant with each other. A diversity
 parameter balances relevance against variety.
 It refines the keywords of every topic.
-
-## Normalized frequency ratio
-The rate of a word per negative review divided by its rate per positive review, with a small constant to
-avoid division by zero.
-The dashboard uses it to rank the "critical words" of negative reviews.
 
 ## Okabe-Ito palette
 A set of eight colours designed by Masataka Okabe and Kei Ito to stay distinct for people with colour vision
@@ -208,11 +203,8 @@ The multilingual model `paraphrase-multilingual-mpnet-base-v2` produces the revi
 ## Smoke test
 A quick test that runs a program end to end to check that nothing breaks, without verifying every result in
 detail.
-The dashboard is smoke-tested in 17 filter scenarios with Streamlit's AppTest.
-
-## Sparkline
-A very small line or bar chart without axes, shown next to a number to indicate its trend.
-The dashboard's metric cards show yearly sparklines.
+The dashboard is smoke-tested with Streamlit's AppTest in 16 tests: the page, the key numbers, every topic of the
+explorer and the expanders.
 
 ## Standard error
 How much an average would change from one sample to another. It is the standard deviation of the values divided by
@@ -222,7 +214,7 @@ Notebook 07 uses it to build the [confidence interval](#confidence-interval) of 
 ## Stopwords
 Very common words with little meaning on their own, such as articles and prepositions, that are usually removed
 before counting words.
-The spaCy Italian stopword list is removed in lemmatization, topic keywords and the dashboard word analysis.
+The spaCy Italian stopword list is removed in lemmatization and from the topic keywords.
 
 ## Stratified sample
 A sample drawn separately from each group (stratum), with a set number of items from each, instead of from all

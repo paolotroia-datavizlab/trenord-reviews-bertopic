@@ -1,0 +1,61 @@
+﻿topic_label,rank,keyword
+Inaccurate Train Info,1,treni
+Inaccurate Train Info,2,ritardi
+Inaccurate Train Info,3,ritardo
+Inaccurate Train Info,4,app
+Inaccurate Train Info,5,orari
+Ticket Purchase Failures,1,biglietti
+Ticket Purchase Failures,2,biglietto
+Ticket Purchase Failures,3,acquistare
+Ticket Purchase Failures,4,acquistare biglietti
+Ticket Purchase Failures,5,app
+App Not Working,1,app
+App Not Working,2,aggiornamento
+App Not Working,3,applicazione
+App Not Working,4,telefono
+App Not Working,5,bug
+Subscription & Payment Failures,1,pagamento
+Subscription & Payment Failures,2,abbonamenti
+Subscription & Payment Failures,3,rinnovare abbonamento
+Subscription & Payment Failures,4,app
+Subscription & Payment Failures,5,pagare
+Poor Usability,1,funziona
+Poor Usability,2,lenta
+Poor Usability,3,inutile
+Poor Usability,4,inaffidabile
+Poor Usability,5,difficile
+Ease of Use,1,semplice
+Ease of Use,2,facile usare
+Ease of Use,3,app
+Ease of Use,4,facile veloce
+Ease of Use,5,ottima app
+Login & Account Issues,1,login
+Login & Account Issues,2,account
+Login & Account Issues,3,profilo
+Login & Account Issues,4,errore
+Login & Account Issues,5,accesso
+Easy Purchases,1,acquisto
+Easy Purchases,2,biglietti
+Easy Purchases,3,acquisto biglietti
+Easy Purchases,4,biglietto
+Easy Purchases,5,pagamento
+Station Issues,1,stazioni
+Station Issues,2,stazione
+Station Issues,3,milano
+Station Issues,4,stazioni preferite
+Station Issues,5,italia
+QR Code Failures,1,code
+QR Code Failures,2,biglietto
+QR Code Failures,3,metro
+QR Code Failures,4,biglietti
+QR Code Failures,5,uscire
+Train Service Complaints,1,servizio pessimo
+Train Service Complaints,2,pessimo servizio
+Train Service Complaints,3,clienti
+Train Service Complaints,4,servizi
+Train Service Complaints,5,scioperi
+Improvement Feedback,1,migliorata
+Improvement Feedback,2,migliorare
+Improvement Feedback,3,aggiornamento
+Improvement Feedback,4,versione
+Improvement Feedback,5,migliorabile

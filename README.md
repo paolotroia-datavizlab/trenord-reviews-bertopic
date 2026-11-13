@@ -5,9 +5,14 @@
 
 What do users complain about, and what do they appreciate, in the Trenord train app? This project collects
 the app's public Google Play reviews, pseudonymizes them, groups the Italian reviews into topics with BERTopic,
-and publishes the results in an interactive Streamlit dashboard.
+and publishes the results in a Streamlit dashboard.
 
-![Dashboard overview](reports/figures/dashboard_overview.png)
+The dashboard is one scrolling page. It opens with four key numbers (reviews analysed, average rating, developer
+reply rate and how well the labels agree with a manual check), then shows what users complain about, how ratings
+and replies changed over the years, an explorer with the keywords, ratings and most upvoted reviews of each topic,
+and a short note on the method and its limits. Every number on it is computed from the published CSVs.
+
+![Dashboard: header, key numbers and the topics users write about](reports/figures/dashboard_overview.png)
 
 - **Dashboard:** https://trenord-review-analysis.streamlit.app
 - **Technical documentation:** [docs/architecture.md](docs/architecture.md)
@@ -47,8 +52,9 @@ Python 3.13 · pandas · spaCy · lingua · BERTopic (sentence-transformers, UMA
 
 ```
 .github/          GitHub Actions workflow that runs the tests
-dashboard/        Streamlit app and its stopword list
-data/processed/   published CSVs read by the dashboard
+.streamlit/       dashboard theme (Trenord green as primary colour)
+dashboard/        Streamlit app, one scrolling page
+data/processed/   published CSVs read by the dashboard, with the topic keywords and the agreement numbers
 docs/             technical documentation and glossary
 notebooks/        pipeline, run in this order:
   01_scraping.ipynb                    download the Play Store reviews
@@ -57,8 +63,8 @@ notebooks/        pipeline, run in this order:
   04_exploratory_analysis.ipynb        ratings and developer replies over time
   05_model_selection.ipynb             compare BERTopic settings
   06_topic_model_training.ipynb        train BERTopic
-  07_topic_labeling.ipynb              label the topics, export the dashboard files
-  08_label_validation.ipynb            stability of the labels, blind coding, agreement with the model
+  07_topic_labeling.ipynb              label the topics, export the dashboard files and topic keywords
+  08_label_validation.ipynb            stability of the labels, blind coding, agreement saved for the dashboard
 reports/figures/  charts and the dashboard screenshot:
   six charts from 04                   ratings and developer replies over time
   chart_reviews_per_topic.png          07: reviews per topic
@@ -66,7 +72,7 @@ reports/figures/  charts and the dashboard screenshot:
   chart_keywords_per_topic.png         07: top keywords of each topic
   chart_topic_priority.png             07: share of reviews against average rating, one dot per topic
   chart_label_confusion.png            08: my labels against the model labels, 196 sampled reviews
-  dashboard_overview.png               dashboard screenshot
+  dashboard_overview.png               dashboard screenshot: header, key numbers, topic chart
 tests/            dashboard smoke tests (Streamlit AppTest)
 ```
 

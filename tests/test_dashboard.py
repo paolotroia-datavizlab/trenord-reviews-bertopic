@@ -1,8 +1,7 @@
 # tests/test_dashboard.py
 #
-# Smoke tests for dashboard/app.py with Streamlit's AppTest.
-# Each scenario sets the filters, reruns the app and checks that it
-# raises no exception and renders all 4 tabs.
+# Smoke tests for dashboard/app.py with Streamlit's AppTest, which runs the script without a
+# browser and gives access to the elements it drew.
 # Run from the repository root: pytest tests/
 
 from pathlib import Path
@@ -15,83 +14,69 @@ ROOT_DIR = Path(__file__).parent.parent
 APP_FILE = ROOT_DIR / "dashboard" / "app.py"
 DATA_DIR = ROOT_DIR / "data" / "processed"
 
-TIMEOUT = 180  # seconds; the first run loads the CSVs and builds the charts
+TIMEOUT = 180  # seconds; the first run loads the CSV files
 
-# Deep Dive topics, read from the same file the dashboard uses
-TOPICS = sorted(
-    pd.read_csv(DATA_DIR / "trenord_reviews_analysis.csv", encoding="utf-8-sig")["topic_label"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+# The 12 topics and their number of reviews, read from the same file the dashboard uses
+analysis_df = pd.read_csv(DATA_DIR / "trenord_reviews_analysis.csv", encoding="utf-8-sig")
+REVIEWS_PER_TOPIC = analysis_df["topic_label"].value_counts()
+TOPICS = REVIEWS_PER_TOPIC.index.tolist()  # largest first, as in the dropdown
 
 
-# ─────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────
-
-def run_app(setup=None):
-    """Run the app once, apply the widget changes in setup, then rerun."""
+def run_app():
     at = AppTest.from_file(str(APP_FILE), default_timeout=TIMEOUT)
     at.run()
-    if setup:
-        setup(at)
-        at.run()
     return at
 
 
-def assert_renders(at):
+def assert_no_exception(at):
     errors = [e.value for e in at.exception]
     assert not errors, errors
-    assert len(at.tabs) == 4
 
 
-def uncheck_ratings(at, keep):
-    for star in [1, 2, 3, 4, 5]:
-        if star not in keep:
-            at.sidebar.checkbox(key=f"rating_{star}").uncheck()
+def test_page_renders():
+    at = run_app()
+    assert_no_exception(at)
+    titles = [element.value for element in at.subheader]
+    assert titles == ["What users complain about", "How it changed", "Explore a topic", "About this analysis"]
 
 
-def uncheck_categories(at, keep):
-    for box in at.sidebar.checkbox:
-        if box.key.startswith("cat_") and box.key != f"cat_{keep}":
-            box.uncheck()
+def test_four_kpis_show_values():
+    at = run_app()
+    # The first four metrics are the key numbers; the explorer adds four more below them
+    kpis = at.metric[:4]
+    labels = [kpi.label for kpi in kpis]
+    assert labels[0] == "Reviews analysed"
+    assert labels[1].startswith("Average rating in ")
+    assert labels[2].startswith("Developer reply rate in ")
+    assert labels[3] == "Labels checked by hand"
+    for kpi in kpis:
+        assert kpi.value.strip() != ""
+    # The number of reviews is the number of rows of the labeled file
+    n_italian = len(pd.read_csv(DATA_DIR / "trenord_reviews_labeled.csv", encoding="utf-8-sig"))
+    assert kpis[0].value == f"{n_italian:,}"
 
 
-# ─────────────────────────────────────────────────────────────
-# SCENARIOS
-# ─────────────────────────────────────────────────────────────
-
-def test_default_filters():
-    assert_renders(run_app())
+def test_topic_options_sorted_by_share():
+    at = run_app()
+    assert at.selectbox(key="topic").options == TOPICS
 
 
 @pytest.mark.parametrize("topic", TOPICS)
-def test_deep_dive_topic(topic):
-    assert_renders(run_app(lambda at: at.selectbox[0].set_value(topic)))
+def test_explore_topic(topic):
+    at = run_app()
+    at.selectbox(key="topic").set_value(topic).run()
+    assert_no_exception(at)
+    # The explorer metrics follow the four key numbers; the first is the number of reviews
+    assert at.metric[4].value == f"{REVIEWS_PER_TOPIC[topic]:,}"
 
 
-def test_zero_rows():
-    # 2015, 1★, App Updates: a combination with no reviews
-    def setup(at):
-        at.sidebar.slider[0].set_value((2015, 2015))
-        uncheck_ratings(at, keep=[1])
-        uncheck_categories(at, keep="App Updates")
-    assert_renders(run_app(setup))
-
-
-def test_incomplete_year_only():
-    def setup(at):
-        max_year = at.sidebar.slider[0].max
-        at.sidebar.slider[0].set_value((max_year, max_year))
-    assert_renders(run_app(setup))
-
-
-def test_praise_only():
-    # No App Issue topics, so the issue findings fall back to their messages
-    assert_renders(run_app(lambda at: uncheck_categories(at, keep="Praise")))
-
-
-def test_five_stars_only():
-    # No negative reviews
-    assert_renders(run_app(lambda at: uncheck_ratings(at, keep=[5])))
+def test_expanders_open_with_content():
+    at = run_app()
+    expanders = at.expander
+    # The full table, then one expander per upvoted review of the selected topic
+    assert expanders[0].label == "Show the full table"
+    assert len(expanders[0].dataframe) == 1
+    assert len(expanders[0].dataframe[0].value) == len(TOPICS)
+    assert len(expanders) > 1
+    for review_expander in expanders[1:]:
+        assert len(review_expander.markdown) >= 1
