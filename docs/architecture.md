@@ -17,11 +17,11 @@ This page explains the steps, the main choices and the checks. The code and the 
 
 ## Data
 
-I collected 7,329 reviews, every written review the scraper could reach. The store showed 16,787 ratings, but that count also includes star-only ratings without text. 6,951 are in Italian and are the ones analysed. 363 have no clear language and 15 are in other languages.
+I collected 7,329 reviews, every written review the scraper could reach. 6,951 are in Italian and are the ones analysed; 363 have no clear language and 15 are in other languages. The store showed 16,787 ratings, but that count also includes star-only ratings without text.
 
 ## Topic model
 
-BERTopic with paraphrase-multilingual-mpnet-base-v2 embeddings, UMAP and HDBSCAN. I picked min_cluster_size 30 and min_df 5 after comparing settings on coherence (c_v), diversity and the size of the largest topic. The model has 30 topics, coherence 0.419 and diversity 0.783. Before reduction, 23.0% of the reviews were outliers; they were then assigned to the closest topic.
+BERTopic with paraphrase-multilingual-mpnet-base-v2 embeddings, UMAP and HDBSCAN. I picked min_cluster_size 30 and min_df 5 after comparing settings on coherence (c_v), diversity and the size of the largest topic. The model has 30 topics, coherence 0.419 and diversity 0.783. HDBSCAN left 23.0% of the reviews as outliers, and I assigned them to the closest topic.
 
 I also tried two other embedding models, other min_samples values and other keyword methods. None was clearly better, so the settings stayed.
 
@@ -29,7 +29,7 @@ I also tried two other embedding models, other min_samples values and other keyw
 
 I read each of the 30 topics with its keywords and example reviews, named it, and merged the topics about the same theme. That left 12 topics in four categories: App Issue, Praise, Rail Service and App Updates.
 
-9 topics (953 reviews, 13.7%) only hold generic verdicts like "ottima" or "pessima" and are left out. They are more positive than the rest (3.66 stars against 1.93), so the analysed reviews are more negative than all Italian reviews.
+The other 9 topics (953 reviews, 13.7%) only hold generic verdicts like "ottima" or "pessima" and are left out. They are more positive than the rest (3.66 stars against 1.93), so the analysed reviews are more negative than all Italian reviews.
 
 ## Checks
 
