@@ -936,8 +936,8 @@ Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion to
 the average rating, `ratings.std() / np.sqrt(n)`, and the 95% margin `t.ppf(0.975, n - 1) * standard_error` from
 the [t distribution](glossary.md#t-distribution); the [confidence interval](glossary.md#confidence-interval) is the
 average plus or minus the margin. Ratings are treated as independent. They are ordinal (1 to 5 stars), and the mean
-is used as is common for star ratings. The intervals show that the App Issue averages overlap, while the two Praise
-topics and Improvement Feedback are clearly above them.
+is used as is common for star ratings. All App Issue topics have low averages, between 1.40 and 1.78 stars, and differ
+by at most 0.38 stars. The two Praise topics (3.98 and 4.54 stars) and Improvement Feedback are clearly above them.
 
 ### Charts and how to read them
 All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
@@ -961,8 +961,9 @@ All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cate
   and its average rating on the y axis, the 95% interval as a vertical line, the full 1-5 scale and a dashed line at
   the average of all analysed reviews (1.93). Each name sits next to its dot. The positions are set by hand in
   `LABEL_POSITIONS`, and the cell checks that no two names overlap (0 overlaps). Problems sit low and praise high.
-  Among the problems the averages are close (1.40 to 1.78) and the intervals overlap, so what separates them is how
-  often they are mentioned, from 25.0% for Inaccurate Train Info to 2.0% for QR Code Failures.
+  The App Issue averages are low, between 1.40 and 1.78 stars, far below the two Praise topics (3.98 and 4.54
+  stars). They differ by at most 0.38 stars, so what separates them is how often they are mentioned, from 25.0% for
+  Inaccurate Train Info to 2.0% for QR Code Failures.
 
 ![Share and average rating per topic](../reports/figures/chart_topic_priority.png)
 
@@ -999,8 +1000,9 @@ All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cate
 
 Cell 29 turns the results into five recommendations. They come from what reviewers write. People who are unhappy
 tend to write more, so the shares describe what reviewers complain about, not the experience of every user. All App
-Issue topics have average ratings between 1.40 and 1.78 stars with overlapping confidence intervals, so the order
-follows how often each problem is mentioned, not how severe it is. Once topics over time are analysed, the order
+Issue topics have low average ratings, between 1.40 and 1.78 stars, far below the two Praise topics (3.98 and 4.54
+stars). The differences between the App Issue topics are small, at most 0.38 stars, compared with the gap to praise.
+So the order follows how often each problem is mentioned, not how severe it is. Once topics over time are analysed, the order
 should be checked against which problems are recent.
 
 1. Fix the train information first. Inaccurate Train Info is the largest topic (25.0% of the analysed reviews).
