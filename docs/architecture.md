@@ -6,7 +6,6 @@ notebooks, and a technical source for a future article.
 - Parameters are copied from the code; numbers come from the final pipeline run.
 - The data snapshot is the scrape whose latest review is dated 2026-08-04.
 - No review texts or author names appear here.
-- Technical terms link to [glossary.md](glossary.md) the first time they appear.
 
 **Cell numbers** count every cell of a notebook from the top, markdown cells included, starting at 1.
 
@@ -24,8 +23,8 @@ train status, buy tickets and renew subscriptions. The project asks:
 
 The study uses the public Google Play Store reviews:
 - ratings and developer replies are analysed over time;
-- the Italian review texts are grouped into topics with [BERTopic](glossary.md#bertopic);
-- each topic gets a label and one of four [categories](glossary.md#category): App Issue, Praise, Rail Service and
+- the Italian review texts are grouped into topics with BERTopic;
+- each topic gets a label and one of four categories: App Issue, Praise, Rail Service and
   App Updates.
 
 ### Data flow
@@ -121,7 +120,7 @@ use complete years (up to 2025), except the row for Jan-Aug 2026, the partial ye
 | Reviews | 7,329 | 6,951 |
 | Average rating | **2.26** | **2.17** |
 | Average rating, first → last complete year | 3.56 (2015) → 1.57 (2025) | 3.54 (2015) → 1.52 (2025) |
-| Developer [reply rate](glossary.md#reply-rate), overall | 41.6% (3,052 reviews) | 41.1% |
+| Developer reply rate, overall | 41.6% (3,052 reviews) | 41.1% |
 | Reply rate 2015-2020 | 83-100% each year | 83-100% each year (peak 100%, 2016) |
 | Reply rate 2021 → 2025 | 32.5% → 1.6% (below 4% every year from 2022) | 32.1% → 1.7% (below 4% every year from 2022) |
 | Average rating and reply rate, Jan-Aug 2026 | - | 1.49 and 3.5% (dashboard cards) |
@@ -131,8 +130,8 @@ use complete years (up to 2025), except the row for Jan-Aug 2026, the partial ye
 | Measure | Value |
 |---|---|
 | Model settings chosen in 05 | `min_cluster_size=30`, `min_df=5` |
-| Topics found by the model | 30 (1,601 [outliers](glossary.md#outlier) reassigned) |
-| Topics after [merging](glossary.md#topic-merge) / final labels | 21 / 12 |
+| Topics found by the model | 30 (1,601 outliers reassigned) |
+| Topics after merging / final labels | 21 / 12 |
 | Excluded | 9 topics, 953 reviews (**13.7%** of Italian reviews) |
 | Analysis set | 5,998 reviews |
 | Category split | App Issue 5,090 (84.9%) · Praise 740 (12.3%) · Rail Service 87 (1.5%) · App Updates 81 (1.4%) |
@@ -173,7 +172,7 @@ to the original data.
    1.82 rating, 1,000,000+ installs and version 4.16.7 (cell 4).
 3. Download page by page with
    `reviews(APP_ID, lang=LANGUAGE, country=COUNTRY, sort=Sort.NEWEST, count=min(BATCH_SIZE, remaining), continuation_token=continuation_token)`,
-   pausing `time.sleep(0.5)` between pages. The [continuation token](glossary.md#continuation-token) links the
+   pausing `time.sleep(0.5)` between pages. The continuation token links the
    pages. The loop stops when the target is reached, a page is empty or the token is `None`; here it stopped after
    batch 38, when no more reviews were available (cell 5).
 4. Compute coverage against the store's rating count (cell 6).
@@ -192,7 +191,7 @@ to the original data.
 ### Design decisions
 - **Newest first, not "most relevant".** `Sort.MOST_RELEVANT` was rejected: its ranking is opaque and changes over time.
 - **Raw immutability.** The raw file is written once and never modified. Only 02 reads it, and it works on a copy.
-- **`utf-8-sig`.** The [BOM](glossary.md#bom-byte-order-mark) lets Excel read accented characters and emoji correctly.
+- **`utf-8-sig`.** The BOM lets Excel read accented characters and emoji correctly.
 
 ### Validation
 - Coverage is computed and printed.
@@ -217,7 +216,7 @@ a code that cannot be traced back without a secret key. It is the only step that
 everything after it works on protected data.
 
 ### Input and output
-- Input: `data/raw/trenord_reviews_raw.csv` (read only), plus the [secret key](glossary.md#secret-key) `PSEUDO_KEY`
+- Input: `data/raw/trenord_reviews_raw.csv` (read only), plus the secret key `PSEUDO_KEY`
   from `.env`.
 - Output: `data/processed/trenord_reviews_anon.csv`, with the raw columns minus `author`.
 
@@ -236,7 +235,7 @@ everything after it works on protected data.
 ### Method
 1. Load the key and the raw file, and run the key check. The key is encoded to bytes once, as `KEY_BYTES`, instead
    of at every call of `pseudonymize_id` (cell 2).
-2. Replace `review_id` with an [HMAC](glossary.md#hmac):
+2. Replace `review_id` with an HMAC:
    `hmac.new(KEY_BYTES, message_bytes, hashlib.sha256).hexdigest()[:12]` (cell 3).
 3. Mask ticket-like codes in `text` as `[CODE]`: first mixed letter-and-digit strings of 8 or more characters,
    then runs of 8 or more digits (cell 4).
@@ -260,7 +259,7 @@ everything after it works on protected data.
 
 ### Design decisions
 - **Keyed HMAC instead of a plain hash.** A plain SHA-256 of a public review id can be recomputed by anyone who knows
-  the id, which would re-identify the row. This is the core of the [pseudonymization](glossary.md#pseudonymization).
+  the id, which would re-identify the row. This is the core of the pseudonymization.
 - **Single point of contact with raw data.** Every later step starts from the anonymised file.
 - **Reply text left intact.** An earlier version also removed reviewer names from `reply_text`. That step was
   dropped: the reply is kept identical to the text published on the store, and this is verified row by row.
@@ -300,15 +299,15 @@ count as the same word.
 1. Load the anonymised file (cell 2).
 2. Derive date features from `date`. The range is 2015-05-05 to 2026-08-04 (cell 3).
 3. Detect the language with `lingua` (`LanguageDetectorBuilder.from_all_languages().build()`) (cell 4):
-   - Italian as the top language is accepted at any [confidence](glossary.md#language-detection-confidence);
+   - Italian as the top language is accepted at any confidence;
    - any other language needs `CONFIDENCE_THRESHOLD = 0.5`, otherwise the review is labeled `unknown`.
 4. Clean the text into `text_clean`: lowercase, remove URLs (`http\S+|www\.\S+`), replace characters outside
    `[a-zàèéìíòóùú\s]` with spaces, collapse whitespace. Count words on the original text (cell 5).
 5. Check duplicates on the Italian reviews: rows, distinct `review_id`, distinct `text_clean`, reviews that share
    their `text_clean` with another review and the number of such groups, and the median length in words of the
    shared texts and of all Italian reviews. Counts only (cell 6). A markdown cell explains the result (cell 7).
-6. [Lemmatize](glossary.md#lemmatization) with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
-   is alphabetic, is not one of the [stopwords](glossary.md#stopwords) and has a lemma longer than 2 characters (cell 8).
+6. Lemmatize with spaCy `it_core_news_lg` into `text_lemmatized`. A token is kept if it
+   is alphabetic, is not one of the stopwords and has a lemma longer than 2 characters (cell 8).
 7. Save (cell 9).
 
 ### Parameters
@@ -322,7 +321,7 @@ count as the same word.
 ### Design decisions
 - **Two-level language detection.** A single threshold was rejected: a strict one discards short Italian reviews,
   and a loose one admits other languages at low confidence.
-- **Two text versions.** `text_clean` keeps natural word order for the [embeddings](glossary.md#embedding) (05, 06);
+- **Two text versions.** `text_clean` keeps natural word order for the embeddings (05, 06);
   `text_lemmatized` groups word variants. The dashboard used it for its word analysis until 2026-11-13; no later
   step reads it now, and the column stays in the published files.
 
@@ -374,7 +373,7 @@ Overall figures are in Key numbers (all languages column).
 ### Design decisions
 - **Line charts for averages and rates.** Bars would suggest a zero baseline. The y axis covers the full 1-5 scale.
 - **Incomplete year in grey and dashed**, so it is not read as a real decline.
-- **[Okabe-Ito](glossary.md#okabe-ito-palette) colours**, which stay distinct for readers with colour vision
+- **Okabe-Ito colours**, which stay distinct for readers with colour vision
   deficiency: blue `#0072B2` for single series, vermillion `#D55E00` for annotations, and a 1-5 star scale
   `#D55E00`, `#E69F00`, `#999999`, `#66C5AB`, `#009E73`. The dashboard uses the same colours.
 - **The star rating is the main sentiment signal.** It is available for every review and given by the author. A
@@ -429,9 +428,9 @@ by 06.
    - outliers before reduction (cell 9);
    - size of the largest topic after reduction (cell 10);
    - the top 10 words of each topic, without empty strings, used by the next two metrics (cell 11);
-   - [topic coherence](glossary.md#topic-coherence) c_v with gensim `CoherenceModel(..., coherence="c_v", processes=1)`
+   - topic coherence c_v with gensim `CoherenceModel(..., coherence="c_v", processes=1)`
      (cell 12);
-   - [topic diversity](glossary.md#topic-diversity): distinct top words divided by all top words (cell 13).
+   - topic diversity: distinct top words divided by all top words (cell 13).
 8. `compute_metrics` combines the four metrics with two counts: topic words not found in any single review, and
    empty keyword slots, which BERTopic adds when a topic has fewer than 10 keywords (cell 14).
 9. Compare `min_cluster_size` 20, 25, 30, 40 and 50 with `min_df=5` (cells 15-16).
@@ -456,7 +455,7 @@ by 06.
 | 40 | 8 | 1.7% | 85.9% | 0.348 | 0.212 | 0 | 14 |
 | 50 | 6 | 1.8% | 85.9% | 0.497 | 0.192 | 0 | 34 |
 
-### Results: [`min_df`](glossary.md#min_df) (`min_cluster_size=30`)
+### Results: `min_df` (`min_cluster_size=30`)
 
 | `min_df` | Coherence c_v | Diversity | Empty slots | Words not found |
 |---:|---:|---:|---:|---:|
@@ -468,14 +467,14 @@ The three `min_df` values give the same topic to every review, and `min_df=5` gi
 `min_cluster_size=30` run of the first table.
 
 ### What `min_df` counts
-BERTopic fits the [CountVectorizer](glossary.md#countvectorizer) on one joined text per topic, not on the reviews
-(this is how [c-TF-IDF](glossary.md#c-tf-idf) works). So `min_df=5` means "the keyword must appear in at least 5
+BERTopic fits the CountVectorizer on one joined text per topic, not on the reviews
+(this is how c-TF-IDF works). So `min_df=5` means "the keyword must appear in at least 5
 topics", not in 5 reviews, and it changes only the keywords: clustering works on the embeddings, and outlier
 reduction on the topic embeddings.
 
 ### The fake bigram finding
 With `min_df` 1 and 2, 49 and 20 of the top keywords appear in no single review. Joining the reviews of a topic
-into one text creates [bigrams](glossary.md#bigram) across review boundaries: the last word of one review followed
+into one text creates bigrams across review boundaries: the last word of one review followed
 by the first word of the next. Short reviews like "ottima" make this common, which gives keywords such as "ottima
 ottima", "ottimo ottimo" and "perfetto ottima"; these three were checked and occur in no review. A joined pair like
 this rarely appears in five topics, so `min_df=5` removes it. The higher diversity of `min_df` 1 and 2 comes largely
@@ -513,8 +512,8 @@ with 5 and lowest with 15.
 
 ### Results: UMAP seed (current settings)
 
-The current settings trained with five UMAP [seeds](glossary.md#random-seed) on the same embeddings (cells 30-34).
-The [adjusted Rand index](glossary.md#adjusted-rand-index-ari) compares the final assignments of each seed with those
+The current settings trained with five UMAP seeds on the same embeddings (cells 30-34).
+The adjusted Rand index compares the final assignments of each seed with those
 of seed 42. Seed 42 gives the same topic for every review as the `min_cluster_size=30` run of the first table,
 which has the same settings (cell 32).
 
@@ -555,8 +554,8 @@ MMR, which also uses the embedding model to compare keywords, passes the words w
 
 Four keyword settings on the current model (cells 40-45). All four give the same topic for every review as the
 current model (cell 42). The extra stopwords are "app" and "applicazione".
-[KeyBERTInspired](glossary.md#keybertinspired) keeps the c-TF-IDF candidates closest to a few representative reviews
-of the topic, while [MMR](glossary.md#mmr-maximal-marginal-relevance) balances relevance and variety.
+KeyBERTInspired keeps the c-TF-IDF candidates closest to a few representative reviews
+of the topic, while MMR balances relevance and variety.
 
 | Keyword setting | Coherence c_v | Diversity | Words not found | Empty slots |
 |---|---:|---:|---:|---:|
@@ -639,25 +638,25 @@ training again gives exactly the same groups.
 - Output:
   - `trenord_reviews_topics.csv`: the clean columns plus `topic`.
   - `bertopic_model_trained/`, saved with `serialization="safetensors"`, `save_ctfidf=True`,
-    `save_embedding_model="paraphrase-multilingual-mpnet-base-v2"` ([safetensors](glossary.md#safetensors)).
+    `save_embedding_model="paraphrase-multilingual-mpnet-base-v2"` (safetensors).
 
 ### Method (parameters verbatim)
 1. Load the data: 7,329 reviews, 6,951 of them in Italian (cell 2).
 2. Prepare the `text_clean` texts of the Italian reviews. Empty or missing texts are replaced by `" "`; there were
    none in this run (cell 3).
 3. Configure the model (cell 4):
-   - embeddings from the [sentence transformer](glossary.md#sentence-transformer)
+   - embeddings from the sentence transformer
      `SentenceTransformer("paraphrase-multilingual-mpnet-base-v2")`;
-   - [UMAP](glossary.md#umap): `UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42)`;
-   - [HDBSCAN](glossary.md#hdbscan): `HDBSCAN(min_cluster_size=30, metric="euclidean", prediction_data=True)`;
+   - UMAP: `UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42)`;
+   - HDBSCAN: `HDBSCAN(min_cluster_size=30, metric="euclidean", prediction_data=True)`;
    - CountVectorizer: `CountVectorizer(stop_words=list(italian_stopwords), min_df=5, ngram_range=(1, 2))`, with
      spaCy's Italian stopwords;
-   - [MMR](glossary.md#mmr-maximal-marginal-relevance): `MaximalMarginalRelevance(diversity=0.3)`;
+   - MMR: `MaximalMarginalRelevance(diversity=0.3)`;
    - BERTopic: `top_n_words=10, language="multilingual", calculate_probabilities=False`.
 4. Train with `fit_transform(texts)`: 30 topics and 1,601 outliers, which get topic -1 (cell 5).
-5. [Reduce outliers](glossary.md#outlier-reduction) with
+5. Reduce outliers with
    `reduce_outliers(texts, topics, strategy="embeddings", threshold=0.0)`, leaving 0 outliers (cell 6).
-6. Update the [topic representations](glossary.md#topic-representation), with c-TF-IDF keywords:
+6. Update the topic representations, with c-TF-IDF keywords:
    `update_topics(texts, topics=new_topics, vectorizer_model=vectorizer_model, representation_model=representation_model)`
    (cell 7). Both models are passed again on purpose. Without them `update_topics` builds a plain
    `CountVectorizer(ngram_range=(1, 1))`, with no stopwords, no bigrams and no `min_df`, and drops MMR, so the
@@ -700,7 +699,7 @@ Cell 13 stops the notebook with an `assert` before any file is overwritten if:
 In this run it printed 6,951 reviews, 30 topics, 0 outliers and "All checks passed".
 
 ### What safetensors saves
-The model is saved in [safetensors](glossary.md#safetensors) format instead of pickle. A pickle file can run code
+The model is saved in safetensors format instead of pickle. A pickle file can run code
 when it is loaded; safetensors stores only numbers. The folder holds:
 - `topics.json`: the topic of every review, the topic sizes, the keywords with their weights and the automatic names;
 - `topic_embeddings.safetensors`: one vector per topic;
@@ -722,14 +721,14 @@ sets MMR again before merging.
 | UMAP `n_components` | 5 | BERTopic's default; reduces dimensions before clustering. Not tuned. |
 | UMAP `min_dist` | 0.0 | BERTopic's default; packs similar points tightly, which helps clustering. Not tuned. |
 | UMAP `metric` | cosine | BERTopic's default; the usual choice for text embeddings. |
-| UMAP `random_state` | 42 | Fixed [random seed](glossary.md#random-seed): "without it results change every run" (notebook comment). 05 compares it with seeds 0, 1, 2 and 3 (§7). |
+| UMAP `random_state` | 42 | Fixed random seed: "without it results change every run" (notebook comment). 05 compares it with seeds 0, 1, 2 and 3 (§7). |
 | HDBSCAN `min_cluster_size` | 30 | Smallest group accepted as a topic. Chosen in 05 against 20, 25, 40 and 50 (§7). BERTopic's default is 10. |
 | HDBSCAN `min_samples` | not set, so 30 | When it is not set, the hdbscan library (0.8.42) uses `min_cluster_size` instead, so the effective value is 30. It sets how strict the clustering is about dense areas: a review is the core of a dense area only if at least 30 points, itself included, are close to it. It changes which reviews are left out as outliers, so it contributes to the 1,601 outliers. Not tuned: 06 keeps the value it gets without setting it, and 05 compares 5, 10, 15 and 30 (§7). Because it follows `min_cluster_size`, it also changed in the `min_cluster_size` runs of 05. |
 | CountVectorizer `min_df` | 5 | A keyword must appear in at least 5 topics, because BERTopic fits the vectorizer on one joined text per topic. Changes only the keywords. Chosen in 05 against 1 and 2 (§7); the library default is 1. |
 | CountVectorizer `ngram_range` | (1, 2) | Single words plus bigrams; a common choice for BERTopic keywords. Not tuned. |
 | MMR `diversity` | 0.3 | "The value recommended in the official BERTopic documentation" (notebook comment). The library default is 0.1. 05 compares MMR with KeyBERTInspired and with extra stopwords (§7). |
 | `top_n_words` | 10 | BERTopic's default. |
-| `reduce_outliers` strategy / threshold | embeddings / 0.0 | Outliers were inspected and judged valid reviews, so all are reassigned by [cosine similarity](glossary.md#cosine-similarity). 0 is the library default threshold; the strategy was chosen over the default `distributions`. |
+| `reduce_outliers` strategy / threshold | embeddings / 0.0 | Outliers were inspected and judged valid reviews, so all are reassigned by cosine similarity. 0 is the library default threshold; the strategy was chosen over the default `distributions`. |
 
 ### Design decisions
 - **HDBSCAN, not K-Means.** HDBSCAN finds the number of topics from the data and accepts groups of any shape.
@@ -749,7 +748,7 @@ sets MMR again before merging.
   - the adjusted Rand index was 0.81.
 
   The environment of the earlier model had not been recorded, so it could not be rebuilt. The model was retrained,
-  the environment was recorded in a [lock file](glossary.md#lock-file) and the labels in 07 were rebuilt for the
+  the environment was recorded in a lock file and the labels in 07 were rebuilt for the
   new topic ids. The earlier model is kept only as a local backup outside the repository.
 - **Representative documents are never printed.** They are real review texts, and the notebook outputs are
   published.
@@ -818,7 +817,7 @@ topics.
 2. Check that the file and the model agree: the topic of every review in `topics.csv` must equal the one stored in
    the model, otherwise one of the two was replaced after 06 (cell 4).
 3. Build the topic overview table, the evidence behind the labels (cell 5).
-4. Write the label map, with two [identifying keywords](glossary.md#identifying-keywords) per topic (cell 6), and
+4. Write the label map, with two identifying keywords per topic (cell 6), and
    check it (cell 7).
 5. Apply the labels with `map()` (cell 8).
 6. Derive the merge list from the labels (cell 9), merge (cell 10) and check the merge (cell 11).
@@ -932,15 +931,15 @@ excluded topics.
 
 Excluded topic ids: 9, 10, 14, 16, 21, 23, 25, 26, 27. Category and exclusion totals are in Key numbers.
 
-**Confidence intervals.** For each label the notebook computes the [standard error](glossary.md#standard-error) of
+**Confidence intervals.** For each label the notebook computes the standard error of
 the average rating, `ratings.std() / np.sqrt(n)`, and the 95% margin `t.ppf(0.975, n - 1) * standard_error` from
-the [t distribution](glossary.md#t-distribution); the [confidence interval](glossary.md#confidence-interval) is the
+the t distribution; the confidence interval is the
 average plus or minus the margin. Ratings are treated as independent. They are ordinal (1 to 5 stars), and the mean
 is used as is common for star ratings. All App Issue topics have low averages, between 1.40 and 1.78 stars, and differ
 by at most 0.38 stars. The two Praise topics (3.98 and 4.54 stars) and Improvement Feedback are clearly above them.
 
 ### Charts and how to read them
-All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the categories: App Issue `#D55E00`, Praise
+All four use the Okabe-Ito palette for the categories: App Issue `#D55E00`, Praise
 `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`.
 - **`chart_reviews_per_topic.png`** (cell 13). Horizontal bars, largest topic at the top, with the number of reviews
   and the share of the analysis set at the end of each bar. App Issue covers 8 of the 12 topics and 84.9% of the
@@ -972,7 +971,7 @@ All four use the [Okabe-Ito palette](glossary.md#okabe-ito-palette) for the cate
   1.93, all Italian reviews 2.17. The excluded reviews are short verdicts at both ends of the scale: 55.2% have 5
   stars and 27.5% have 1 star. The analysed ones are mostly negative: 62.3% have 1 star. The full shares are in Key
   numbers. Removing the excluded reviews makes the analysis set more negative than all Italian reviews, an
-  [exclusion bias](glossary.md#exclusion-bias): the topics describe what users write about when they say something
+  exclusion bias: the topics describe what users write about when they say something
   specific, not overall satisfaction.
 - **Share excluded per year** (cell 22). It goes from 7.4% in 2017 to 23.8% in 2020, with a peak between 2019 and
   2021 (18.6%, 23.8%, 17.3%). Overall rating trends use all reviews and are not affected. Trends of single topics over
@@ -1085,7 +1084,7 @@ Both are local only and gitignored.
 
 08 checks the 12 labels of 07 in three parts. Part 1 trains the model of 06 again with other UMAP seeds and
 measures how many reviews keep their label. Part 2 draws a sample of reviews for
-[blind coding](glossary.md#blind-coding) by hand. Part 3 compares my coding of the sample with the model labels. It
+blind coding by hand. Part 3 compares my coding of the sample with the model labels. It
 changes no label. In `data/processed/` it writes only `validation_summary.csv`, the agreement numbers the dashboard
 shows.
 
@@ -1120,19 +1119,19 @@ current names in code, without editing the files in `labeling/`.
 6. Rebuild the strata the sample was drawn from (cell 15): the renamed labels go back to their old name, and
    Station Issues is split again by its 06 topic, 7 for Station & Favorites Bugs and 28 for Missing Stations. Every
    stratum must map back to the current label of its review.
-7. Write the codebook (cell 16), draw a [stratified sample](glossary.md#stratified-sample) (cell 17), shuffle it
+7. Write the codebook (cell 16), draw a stratified sample (cell 17), shuffle it
    (cell 18), write the two files (cell 19) and read them back (cell 20).
 8. Load my coding and check it: 196 rows, every `my_label` filled, only the 15 labels of the codebook. A failed
    check raises an error that names only the `sample_id` of the wrong rows (cell 24). Join it with the key on
    `sample_id` (cell 25).
 9. Map my labels and the key's labels to the current names with `NEW_LABEL_NAMES`, and keep the key's label as the
    stratum of the review (cell 27).
-10. Compute the raw agreement and [Cohen's kappa](glossary.md#cohens-kappa) on the sample (cell 29), and the
+10. Compute the raw agreement and Cohen's kappa on the sample (cell 29), and the
     weighted agreement on all reviews (cell 31).
-11. Compute 95% intervals for the three numbers with a [bootstrap](glossary.md#bootstrap) (cells 33-34), and save
+11. Compute 95% intervals for the three numbers with a bootstrap (cells 33-34), and save
     the three numbers with their intervals and the sample size to `validation_summary.csv` (cell 35).
-12. Compute the [precision](glossary.md#precision) of each label (cell 37), the
-    [confusion matrix](glossary.md#confusion-matrix) as a table and a chart (cells 39-40) and the five most frequent
+12. Compute the precision of each label (cell 37), the
+    confusion matrix as a table and a chart (cells 39-40) and the five most frequent
     disagreements (cell 41).
 13. Write the disagreements, with their texts, to `labeling/validation_disagreements.csv` (cell 43).
 
@@ -1236,7 +1235,7 @@ each stratum, every label can be checked.
 In the sample every stratum has
 the same weight, 14 of 196, while in the data the sizes go from 71 to 1,501 reviews. The plain share of matches in
 the sample therefore over-weights the small strata. To estimate the agreement over all reviews, the agreement of each
-stratum is weighted by its share of all reviews (a [weighted accuracy](glossary.md#weighted-accuracy), called weighted
+stratum is weighted by its share of all reviews (a weighted accuracy, called weighted
 agreement in 08). A made-up example with two labels: label A holds 90% of the
 reviews and is right 9 times out of 10 in the sample, label B holds 10% and is right 5 times out of 10. The plain
 share of matches is 14 of 20, 70%; the weighted accuracy is 0.9 x 90% + 0.1 x 50% = 86%.
@@ -1318,7 +1317,7 @@ reviews I coded EXCLUDE and 5 are reviews I coded None of these.
 
 #### Reading the agreement
 - The kappa, 0.812 (0.763 to 0.862), falls in the "almost perfect" band (0.81 to 1.00) of the
-  [Landis and Koch](glossary.md#landis-and-koch-scale) (1977) scale, just above its lower edge, and its interval
+  Landis and Koch (1977) scale, just above its lower edge, and its interval
   reaches down into "substantial" (0.61 to 0.80). The scale is a convention, with bands chosen by judgment, not a
   test.
 - The raw agreement and the kappa describe the 196 sampled reviews, where each of the 14 strata weighs the same. The
@@ -1425,9 +1424,8 @@ centred, so lines of text stay short on a large monitor. From top to bottom:
    share of the 5,998 reviews about a specific topic." Then a horizontal bar chart of the 12 topics, largest first,
    coloured by category, with a legend of the four categories. The topic name is written above each bar and only the
    share is written next to it, with one decimal. The chart has no x axis and no grid lines. A caption says that 953
-   reviews (13.7% of the 6,951) only give a generic verdict and were set aside ([generic
-   reviews](glossary.md#generic-review)). The expander "Show the full table"
-   holds topic, category, reviews, share, average rating and its 95% confidence interval.
+   reviews (13.7% of the 6,951) only give a generic verdict and were set aside. The expander "Show the full table" holds
+   topic, category, reviews, share, average rating and its 95% confidence interval.
 4. How it changed. The sentence "Average rating and share of reviews with a reply, year by year.", a checked title
    (see below) and one chart with two panels on the same year axis: "Average rating per year" and "Reviews with a
    reply, per year". The legend has two entries: "Year" and "Jan-Aug 2026". The caption is "The two lines move
@@ -1455,7 +1453,7 @@ memory with `st.cache_data`.
   before. The latest review is dated 2026-08-04, so the last complete year is 2025.
 - A year is shown only if it has at least `MIN_REVIEWS_PER_YEAR = 30` reviews. Every year from 2015 to 2025 has
   more (the fewest is 154, in 2016).
-- The year after the last complete one is a [partial year](glossary.md#partial-year). It is shown only if it has at least 30 reviews: 2026 has
+- The year after the last complete one is a partial year. It is shown only if it has at least 30 reviews: 2026 has
   314.
 - The partial year is named by its months: the month of its first review and the month of its last one, with the
   short English month names. The first review of 2026 is dated 2026-01-03 and the last 2026-08-04, so the page writes
@@ -1547,7 +1545,7 @@ Three short paragraphs. Every number is read from the data files:
 repository.
 
 ### Theme and brand colours
-`.streamlit/config.toml` sets the [theme](glossary.md#streamlit-theme). Streamlit reads it when it starts, and Streamlit Cloud reads the same file
+`.streamlit/config.toml` sets the theme. Streamlit reads it when it starts, and Streamlit Cloud reads the same file
 from the repository.
 
 | Setting | Value |
@@ -1566,7 +1564,7 @@ The two brand colours come from trenord.it, checked on 2026-11-13:
   `https://www.trenord.it/fileadmin/templates/img/header/logo-top-trenord.png`, sampled from the image.
 
 The brand colours are used only for the interface: the green banner, its red bottom border and the primary colour of
-the widgets. The logo is not used. The data keep the [Okabe-Ito](glossary.md#okabe-ito-palette) colours of the
+the widgets. The logo is not used. The data keep the Okabe-Ito colours of the
 notebooks: App Issue `#D55E00`, Praise `#009E73`, Rail Service `#CC79A7`, App Updates `#0072B2`, and from 1 to 5
 stars `#D55E00`, `#E69F00`, `#999999`, `#66C5AB`, `#009E73`. The yearly lines carry no category, so they are dark
 grey `#4A4A4A`, and the partial year is a lighter grey `#9B9B9B` with a dashed line.
@@ -1602,7 +1600,7 @@ grey `#4A4A4A`, and the partial year is a lighter grey `#9B9B9B` with a dashed l
 
 ### Validation
 `tests/test_dashboard.py` runs the app with `streamlit.testing.v1.AppTest` in 16
-[smoke tests](glossary.md#smoke-test), all passing:
+smoke tests, all passing:
 - the page renders without exceptions, with its four sections in order;
 - the three cards have the expected labels and a value, and the second shows the App Issue share computed from the
   analysis file;
@@ -1628,14 +1626,14 @@ the `venv_trenord` kernel.
   - `requirements.txt`: the dashboard, read by Streamlit Cloud and by the tests in GitHub Actions;
   - `requirements-notebooks.txt`: the packages the notebooks use directly, pinned;
   - `requirements-notebooks.lock.txt`: every package of the environment, with its exact version.
-- Full environment: `requirements-notebooks.lock.txt`, a [lock file](glossary.md#lock-file) from `pip freeze`. It
+- Full environment: `requirements-notebooks.lock.txt`, a lock file from `pip freeze`. It
   pins all 144 installed packages, including indirect ones such as transformers, numba and pynndescent.
   - It captures the environment of 2026-11-02. setuptools, already installed, was added to the file on
     2026-11-03, and nbformat with its dependency fastjsonschema, also already installed, on 2026-11-04. openpyxl
     3.1.5 and its dependency et_xmlfile 2.0.0 were installed and added on 2026-11-05, for the Excel file of 08. No
     other version changed. In it 06 reproduces the current topic model exactly and the tests pass.
   - It is not the environment of the earlier model replaced on 2026-11-02 (§8), which was not recorded.
-- [Secret key](glossary.md#secret-key) in `.env` (template: `.env.example`).
+- Secret key in `.env` (template: `.env.example`).
 
 **How to run.**
 

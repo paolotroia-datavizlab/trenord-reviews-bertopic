@@ -1,133 +1,45 @@
-# Trenord App Reviews: Topic Modeling with BERTopic
+# Trenord App Reviews
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://trenord-review-analysis.streamlit.app)
 [![tests](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml/badge.svg)](https://github.com/paolotroia-datavizlab/trenord-reviews-bertopic/actions/workflows/tests.yml)
 
-What do users complain about, and what do they appreciate, in the Trenord train app? This project collects
-the app's public Google Play reviews, pseudonymizes them, groups the Italian reviews into topics with BERTopic,
-and publishes the results in a Streamlit dashboard.
+What do people complain about in the Trenord app? I collected 6,951 Italian reviews from Google Play (May 2015 to August 2026), grouped them into topics with BERTopic and checked the topics by hand.
 
-The dashboard is one scrolling page. It opens with three key numbers: the average rating and the share of reviews
-with a reply in Jan-Aug 2026, each next to its 2015 value, and the share of reviews about app problems. Then it
-shows what users write about, how ratings and replies changed year by year, an explorer with the keywords, ratings
-and most upvoted reviews of each topic, and a short note on the method and its limits. Every number on it is
-computed from the published CSVs.
+**Dashboard:** https://trenord-review-analysis.streamlit.app
 
 ![Dashboard: header, key numbers and the topics users write about](reports/figures/dashboard_overview.png)
 
-- **Dashboard:** https://trenord-review-analysis.streamlit.app
-- **Technical documentation:** [docs/architecture.md](docs/architecture.md)
-- **Glossary:** [docs/glossary.md](docs/glossary.md)
-- **Data dictionary:** [columns of the published CSVs](docs/architecture.md#15-data-dictionary)
+## What I found
 
-## Key findings
+- The average rating fell from 3.54 stars in 2015 to 1.52 in 2025 (1.49 in Jan-Aug 2026).
+- Trenord replied to 83-100% of reviews every year until 2020, and to less than 4% every year since 2022.
+- 84.9% of the reviews about a specific topic describe a problem with the app. The most common are inaccurate train info (25.0%) and failed ticket purchases (19.1%).
+- What users like most is ease of use (463 reviews, 4.54 stars).
+- A blind manual check of 196 reviews agrees with the topics in 86.6% of cases (95% CI 81.7% to 91.2%).
 
-The numbers cover the 6,951 Italian reviews from May 2015 to August 2026, unless a year is named.
+## What Trenord could fix first
 
-- **Ratings have collapsed:** the yearly average fell from 3.54★ in 2015 to 1.52★ in 2025, and is 1.49★ in
-  Jan-Aug 2026.
-- **Developer replies stopped:** Trenord answered 83-100% of reviews every year from 2015 to 2020, 32.1% in 2021,
-  and less than 4% every year from 2022 to 2025 (1.7% in 2025, 3.5% in Jan-Aug 2026).
-- **Top app issues:** inaccurate train info (1,501 reviews), ticket purchase failures (1,143), an app that does not
-  work (655) and subscription and payment failures (641).
-- **Mostly complaints:** 84.9% of the 5,998 informative reviews fall in App Issue topics, all rated between 1.40★
-  and 1.78★; 1.5% are about the rail service rather than the app.
-- **What users like:** ease of use is the largest Praise topic (463 reviews, 4.54★).
-- **Read with care:** the 953 excluded reviews are short verdicts, 55.2% with 5★ and 27.5% with 1★, so the analysed
-  reviews are more negative than all Italian reviews (1.93★ against 2.17★).
-- Labels checked by hand: on a blind coding of 196 sampled reviews, my labels and the model's agree with Cohen's
-  kappa 0.812 (95% CI 0.763 to 0.862); weighted to all Italian reviews, the agreement is 86.6% (95% CI 81.7% to 91.2%).
+1. Train information, the largest topic.
+2. Buying and using a ticket: tickets, subscriptions and QR codes are 31.7% of the reviews.
+3. Stability and usability.
+4. Replies to reviews.
+5. And keep what users like: ease of use and easy purchases.
 
-## Recommendations
+## How it works
 
-Ordered by how often each problem is mentioned, since the App Issue ratings are all close. Full text with the numbers
-behind each point: [Recommendations](docs/architecture.md#recommendations).
+Eight notebooks, run in order: scraping, anonymization, cleaning, exploratory analysis, model selection, training, labeling, validation. The choices and checks behind each step are in [docs/architecture.md](docs/architecture.md).
 
-1. Fix the train information first: Inaccurate Train Info is the largest topic (25.0% of the analysed reviews).
-2. Make buying and using a ticket reliable: tickets, subscriptions and QR codes together are 31.7% of the reviews.
-3. Improve stability and usability: App Not Working, Poor Usability, Login & Account Issues and Station Issues.
-4. Start replying to reviews again: replies fell from 83-100% a year from 2015 to 2020 to less than 4% a year from
-   2022 to 2025 (3.5% in Jan-Aug 2026).
-5. Keep what users like: ease of use and easy purchases, 12.3% of the reviews.
+Python 3.13 · pandas · spaCy · BERTopic · Plotly · Streamlit
 
-## Tech stack
+## Limits
 
-Python 3.13 · pandas · spaCy · lingua · BERTopic (sentence-transformers, UMAP, HDBSCAN) · matplotlib · Streamlit · Plotly
+- Google Play only, and the scraper reached about 43% of the store's ratings.
+- Unhappy users write more, so the shares describe reviewers, not all users.
+- 953 generic reviews ("great", "terrible") are left out of the topics.
+- One person checked the labels.
 
-## Repository structure
+## Data and license
 
-```
-.github/          GitHub Actions workflow that runs the tests
-.streamlit/       dashboard theme (Trenord green as primary colour)
-dashboard/        Streamlit app, one scrolling page
-data/processed/   published CSVs read by the dashboard, with the topic keywords and the agreement numbers
-docs/             technical documentation and glossary
-notebooks/        pipeline, run in this order:
-  01_scraping.ipynb                    download the Play Store reviews
-  02_anonymization.ipynb               pseudonymize ids, drop author names
-  03_cleaning.ipynb                    language detection, text cleaning, lemmas
-  04_exploratory_analysis.ipynb        ratings and developer replies over time
-  05_model_selection.ipynb             compare BERTopic settings
-  06_topic_model_training.ipynb        train BERTopic
-  07_topic_labeling.ipynb              label the topics, export the dashboard files and topic keywords
-  08_label_validation.ipynb            stability of the labels, blind coding, agreement saved for the dashboard
-reports/figures/  charts and the dashboard screenshot:
-  six charts from 04                   ratings and developer replies over time
-  chart_reviews_per_topic.png          07: reviews per topic
-  chart_avg_rating_per_topic.png       07: average rating per topic, with 95% confidence intervals
-  chart_keywords_per_topic.png         07: top keywords of each topic
-  chart_topic_priority.png             07: share of reviews against average rating, one dot per topic
-  chart_label_confusion.png            08: my labels against the model labels, 196 sampled reviews
-  dashboard_overview.png               dashboard screenshot: header, three key numbers, topic chart
-tests/            dashboard smoke tests (Streamlit AppTest)
-```
+Author names are removed and review ids are pseudonymized. The code is MIT-licensed. The review texts belong to their authors and are not covered by the license; to have a review removed, open an issue.
 
-## Quick start
-
-```bash
-python -m venv venv_trenord
-venv_trenord\Scripts\activate        # macOS / Linux: source venv_trenord/bin/activate
-pip install -r requirements.txt
-streamlit run dashboard/app.py
-```
-
-To run the tests: `pip install pytest`, then `pytest tests/` from the repository root.
-
-There are three requirements files. `requirements.txt` holds the dashboard dependencies, used by Streamlit Cloud and
-by the tests; `requirements-notebooks.txt` pins the packages the notebooks use directly; and
-`requirements-notebooks.lock.txt` lists every package of the environment with its exact version, so it can be
-rebuilt as it was.
-
-To run the notebooks, install their dependencies and create `.env` with your own pseudonymization key:
-
-```bash
-pip install -r requirements-notebooks.txt   # or requirements-notebooks.lock.txt for the full pinned environment
-cp .env.example .env                        # then replace change_me with the output of:
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-Never commit `.env`. A different key gives different `review_id` values but identical topics and results. In the
-environment of the lock file, training the topic model in 06 gives exactly the same topics. For the full pipeline,
-see [Reproducibility in docs/architecture.md](docs/architecture.md#12-reproducibility).
-
-## Data and privacy
-
-Reviews come from an unofficial scraper and cover only part of the store's reviews (about 43% of its ratings).
-Google Play is the only source. Star ratings are ordinal: they are in order, but the step from one star to the
-next is not necessarily the same size. The topics depend partly on the random seed of UMAP: other seeds give 27
-to 33 topics, with an adjusted Rand index of 0.515 to 0.885 against the seed used. The embedding model was
-compared with two others using UMAP and HDBSCAN settings chosen for it, so that comparison favours it.
-Author names are removed, review ids are pseudonymized with a keyed hash, and the raw data is not published.
-Details: [Privacy and data handling](docs/architecture.md#13-privacy-and-data-handling).
-
-## License
-
-The code is MIT-licensed ([LICENSE](LICENSE)); the license does not cover the review data, whose rights remain
-with their authors and the platform.
-
-## Author
-
-Paolo Troia
-
-- LinkedIn: https://www.linkedin.com/in/paolotroia/
-- Blog: https://www.paolotroia.com
+Paolo Troia · [LinkedIn](https://www.linkedin.com/in/paolotroia/)
