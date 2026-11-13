@@ -24,11 +24,9 @@ What do people complain about in the Trenord app? I collected 6,951 Italian revi
 3. App stability, usability and login.
 4. Replies to reviews on Google Play.
 
-And keep what users like: ease of use and easy purchases.
-
 ## How it works
 
-Eight notebooks, run in order: scraping, anonymization, cleaning, exploratory analysis, model selection, training, labeling, validation. The choices and checks behind each step are in [docs/architecture.md](docs/architecture.md).
+The analysis is in eight notebooks: scraping, anonymization, cleaning, exploratory analysis, model selection, training, labeling, validation. The choices and checks behind each step are in [docs/architecture.md](docs/architecture.md).
 
 Python 3.13 · pandas · spaCy · BERTopic · Plotly · Streamlit
 
