@@ -96,10 +96,8 @@ MIN_REVIEWS_PER_YEAR = 30
 
 # The label of the reviews set aside in notebook 07, because they only give a generic verdict
 EXCLUDED_LABEL = "EXCLUDE"
-# The category that holds the problems with the app, used in the opening sentence
+# The category that holds the problems with the app, used in the second key number card
 APP_ISSUE_CATEGORY = "App Issue"
-# Categories that describe a complaint, used for the title of the topic chart
-COMPLAINT_CATEGORIES = ["App Issue", "Rail Service"]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -211,6 +209,12 @@ def format_stars(value):
 last_complete_year = find_last_complete_year(all_reviews)
 first_data_year = int(all_reviews["year"].min())
 last_data_year = int(all_reviews["year"].max())
+# Month and year of the first and the last review, for the subtitle. month_name() gives the
+# month in English whatever the language of the computer.
+first_review_date = all_reviews["date"].min()
+last_review_date = all_reviews["date"].max()
+first_review_month = f"{first_review_date.month_name()} {first_review_date.year}"
+last_review_month = f"{last_review_date.month_name()} {last_review_date.year}"
 
 # Years used for the trends: complete years with enough reviews
 years = yearly_numbers(all_reviews, last_complete_year)
@@ -224,6 +228,16 @@ peak_reply_year = int(peak_reply_row["year"])
 
 # The incomplete last year is shown only if it has enough reviews
 incomplete_years = years[~years["complete"] & years["enough_reviews"]]
+
+# The year of the key number cards: the current year so far, if it already has enough reviews,
+# so the cards show the newest data; otherwise the last full year. card_year_text says which, and
+# goes into the labels and the help texts.
+if incomplete_years.empty:
+    card_year_row = last_year_row
+    card_year_text = f"{last_year}"
+else:
+    card_year_row = incomplete_years.iloc[-1]
+    card_year_text = f"{int(card_year_row['year'])} so far"
 
 topics = topic_numbers(topic_reviews)
 n_italian = len(all_reviews)
@@ -297,8 +311,9 @@ def point_texts(values, formatter):
 
 
 def topic_share_chart(topics):
-    """Horizontal bars, one per topic, largest at the top, coloured by category. Share and
-    average rating are written next to each bar, so the colour is never needed to read them.
+    """Horizontal bars, one per topic, largest at the top, coloured by category. The share is
+    written next to each bar, so the colour is never needed to read it, and the x axis with its
+    grid lines is left out: with every value written, it would only add lines to read past.
     The topic name is written above its bar instead of on the axis: long names on the axis
     would leave almost no room for the bars on a phone."""
     fig = go.Figure()
@@ -309,7 +324,7 @@ def topic_share_chart(topics):
             continue
         bar_texts = []
         for _, row in category_topics.iterrows():
-            bar_texts.append(f"{row['share']:.1f}%  ·  {row['avg_rating']:.2f}★")
+            bar_texts.append(f"{row['share']:.1f}%")
         fig.add_trace(go.Bar(
             x=category_topics["share"],
             y=category_topics["topic_label"],
@@ -331,16 +346,19 @@ def topic_share_chart(topics):
     # largest topic at the top
     topic_order = topics["topic_label"].tolist()
     topic_order.reverse()
-    fig.update_yaxes(categoryorder="array", categoryarray=topic_order, showgrid=False,
-                     showticklabels=False)
+    fig.update_yaxes(categoryorder="array", categoryarray=topic_order, showticklabels=False)
     for label in topic_order:
         fig.add_annotation(x=0, y=label, text=label, showarrow=False, xanchor="left",
                            yanchor="bottom", yshift=11, font=dict(size=FONT_SIZE))
-    # Room on the right for the text next to the longest bar
-    fig.update_xaxes(title_text="Share of the reviews about a topic (%)",
-                     range=[0, topics["share"].max() * 1.6], ticksuffix="%")
     fig.update_layout(bargap=0.55)
-    return style_figure(fig, height=700)
+    style_figure(fig, height=640)
+    # These axis settings come after style_figure, because style_figure turns the grid on.
+    # No x axis and no vertical grid lines. The range ends just after the longest bar, with room
+    # for its label: 18% more than the bar is enough for "25.0%" on a phone screen.
+    fig.update_xaxes(visible=False, showgrid=False, range=[0, topics["share"].max() * 1.18])
+    # No horizontal grid lines either: they would run through the topic names above the bars.
+    fig.update_yaxes(showgrid=False)
+    return fig
 
 
 def trend_chart(trend_years, incomplete_years):
@@ -456,7 +474,7 @@ st.markdown(
                 border-radius:8px; padding:22px 26px; margin-bottom:16px; color:white;">
       <div style="font-size:2rem; font-weight:700; line-height:1.2;">Trenord App Reviews - What Users Say</div>
       <div style="font-size:1.1rem; margin-top:6px;">
-        {n_italian:,} Google Play reviews in Italian, {first_data_year} to {last_data_year}
+        {n_italian:,} Google Play reviews in Italian, {first_review_month} to {last_review_month}
       </div>
     </div>
     """,
@@ -474,79 +492,67 @@ st.markdown(
 # number on the card and the number in a sentence can never disagree by a rounding.
 # ─────────────────────────────────────────────────────────────
 
-rating_now = round(last_year_row["avg_rating"], 2)
+rating_now = round(card_year_row["avg_rating"], 2)
 rating_then = round(first_year_row["avg_rating"], 2)
-app_issue_share_shown = round(app_issue_share)
-reply_now = round(last_year_row["reply_rate"], 1)
+app_issue_share_shown = round(app_issue_share, 1)
+reply_now = round(card_year_row["reply_rate"], 1)
 reply_then = round(first_year_row["reply_rate"], 1)
 
 kpi_1, kpi_2, kpi_3 = st.columns(3)
 with kpi_1:
     st.metric(
-        label=f"Average rating in {last_year}",
+        label=f"Average rating, {card_year_text}",
         value=f"{rating_now:.2f} stars",
         delta=f"{rating_then:.2f} in {first_year}",
         delta_color="off",
         delta_arrow="off",
         border=True,
-        help=(
-            f"Average of all Italian reviews written in {last_year}, from 1 to 5 stars. {last_year} is the "
-            f"last full year; {last_data_year} is still in progress. Only years with at least "
-            f"{MIN_REVIEWS_PER_YEAR} reviews are used, so {first_year} is the first year shown."
-        ),
+        help=f"Average stars given in reviews written in {card_year_text}.",
     )
 with kpi_2:
     st.metric(
         label="Reviews about app problems",
-        value=f"{app_issue_share_shown}%",
-        delta=f"of {n_topic_reviews:,} reviews about a specific topic",
+        value=f"{app_issue_share_shown:.1f}%",
+        delta=f"excludes {n_excluded:,} generic reviews",
         delta_color="off",
         delta_arrow="off",
         border=True,
         help=(
-            f"Share of the {n_topic_reviews:,} reviews about one of the {len(topics)} topics that fall in a "
-            f"topic of the {APP_ISSUE_CATEGORY} category: something in the app does not work, works badly or "
-            f"stopped working. The other {n_excluded:,} Italian reviews only give a generic verdict and are "
-            f"not counted."
+            "Share of reviews that describe a problem with the app. "
+            "Generic reviews like 'great' or 'terrible' are left out."
         ),
     )
 with kpi_3:
     st.metric(
-        label=f"Developer reply rate in {last_year}",
+        label=f"Reviews with a reply, {card_year_text}",
         value=f"{reply_now:.1f}%",
         delta=f"{reply_then:.1f}% in {first_year}",
         delta_color="off",
         delta_arrow="off",
         border=True,
-        help=(
-            f"Share of the Italian reviews of {last_year} that got a reply from the developer. {last_year} "
-            f"is the last full year; {last_data_year} is still in progress. The note shows {first_year}, the "
-            f"first year with at least {MIN_REVIEWS_PER_YEAR} reviews."
-        ),
+        help=f"Share of reviews written in {card_year_text} that got a reply.",
     )
 
 # ─────────────────────────────────────────────────────────────
-# WHAT USERS COMPLAIN ABOUT
+# WHAT USERS WRITE ABOUT
 # ─────────────────────────────────────────────────────────────
 
-st.subheader("What users complain about")
+st.subheader("What users write about")
 st.markdown(
-    f"The reviews were grouped into {len(topics)} topics found automatically and checked by hand. "
-    "This shows what people write about most, and how they rate the app when they do."
+    f"Each review was assigned to one of {len(topics)} topics. The bars show each topic's share of the "
+    f"{n_topic_reviews:,} reviews about a specific topic."
 )
 
-complaint_topics = topics[topics["category"].isin(COMPLAINT_CATEGORIES)]
-top_complaint = complaint_topics.iloc[0]
-chart_title(
-    f"{top_complaint['topic_label']} is the most common complaint, "
-    f"in {top_complaint['share']:.1f}% of the reviews about a topic"
-)
+# The title turns the share of the largest topic into "1 review in n", which is easier to picture
+# than a percentage: 25% becomes 1 review in 4. n is the inverse of the share, rounded.
+largest_topic = topics.iloc[0]
+one_in_n = round(100 / largest_topic["share"])
+chart_title(f"{largest_topic['topic_label']} is the most common topic: 1 review in {one_in_n}")
 show_chart(topic_share_chart(topics))
 st.caption(
-    f"The shares are based on the {n_topic_reviews:,} reviews about a specific topic. Each bar shows the "
-    f"share of a topic, followed by the average rating of its reviews. Another {n_excluded:,} reviews ({excluded_share:.1f}% of the "
-    f"{n_italian:,} Italian reviews) only give a generic verdict, such as a word of praise or blame, "
-    "and were set aside."
+    f"Another {n_excluded:,} reviews ({excluded_share:.1f}% of the {n_italian:,} Italian reviews) only give "
+    "a generic verdict, such as a word of praise or blame, and were set aside. The average rating of "
+    "each topic is in the full table."
 )
 
 # st.expander hides content behind a click, so the full table is there for whoever wants it

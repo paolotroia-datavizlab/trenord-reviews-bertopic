@@ -40,7 +40,7 @@ def test_page_renders():
     at = run_app()
     assert_no_exception(at)
     titles = [element.value for element in at.subheader]
-    assert titles == ["What users complain about", "How it changed", "Explore a topic", "About this analysis"]
+    assert titles == ["What users write about", "How it changed", "Explore a topic", "About this analysis"]
 
 
 def test_three_kpis_show_values():
@@ -48,14 +48,15 @@ def test_three_kpis_show_values():
     # The first three metrics are the key numbers; the explorer adds four more below them
     kpis = at.metric[:N_KPIS]
     labels = [kpi.label for kpi in kpis]
-    assert labels[0].startswith("Average rating in ")
+    # The year in the labels is computed, so only the start of the label is fixed
+    assert labels[0].startswith("Average rating, ")
     assert labels[1] == "Reviews about app problems"
-    assert labels[2].startswith("Developer reply rate in ")
+    assert labels[2].startswith("Reviews with a reply, ")
     for kpi in kpis:
         assert kpi.value.strip() != ""
-    # The share of app problems is computed from the analysis file, rounded as on the card
+    # The share of app problems is computed from the analysis file, with one decimal as on the card
     app_issue_share = (analysis_df["category"] == "App Issue").mean() * 100
-    assert kpis[1].value == f"{round(app_issue_share)}%"
+    assert kpis[1].value == f"{app_issue_share:.1f}%"
 
 
 def test_topic_options_sorted_by_share():
