@@ -78,7 +78,7 @@ in its section below.
 | `trenord_reviews_anon.csv` | 02 | no |
 | `trenord_reviews_clean.csv` | 03 | no |
 | six charts in `reports/figures/` (§6) | 04 | yes |
-| `reports/figures/dashboard_overview.png` (dashboard screenshot) | - | yes |
+| `reports/figures/dashboard_topics.png`, `reports/figures/dashboard_trends.png` (dashboard screenshots) | - | yes |
 | none (metric tables in the notebook only) | 05 | - |
 | `trenord_reviews_topics.csv` | 06 | no |
 | `bertopic_model_trained/` | 06 | no |

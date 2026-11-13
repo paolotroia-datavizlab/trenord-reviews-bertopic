@@ -7,8 +7,6 @@ What do people complain about in the Trenord app? I collected 6,951 Italian revi
 
 **Dashboard:** https://trenord-review-analysis.streamlit.app
 
-![Dashboard: header, key numbers and the topics users write about](reports/figures/dashboard_overview.png)
-
 ## What I found
 
 - The average rating fell from 3.54 stars in 2015 to 1.52 in 2025 (1.49 in Jan-Aug 2026).
@@ -17,13 +15,16 @@ What do people complain about in the Trenord app? I collected 6,951 Italian revi
 - What users like most is ease of use (463 reviews, 4.54 stars).
 - A blind manual check of 196 reviews agrees with the topics in 86.6% of cases (95% CI 81.7% to 91.2%).
 
+<p><a href="https://trenord-review-analysis.streamlit.app"><img src="reports/figures/dashboard_topics.png" width="49%" alt="Topics users write about"></a> <a href="https://trenord-review-analysis.streamlit.app"><img src="reports/figures/dashboard_trends.png" width="49%" alt="Ratings and replies per year"></a></p>
+
 ## What Trenord could fix first
 
 1. Train information, the largest topic.
 2. Buying and using a ticket: tickets, subscriptions and QR codes are 31.7% of the reviews.
-3. Stability and usability.
+3. App stability, usability and login.
 4. Replies to reviews.
-5. And keep what users like: ease of use and easy purchases.
+
+And keep what users like: ease of use and easy purchases.
 
 ## How it works
 

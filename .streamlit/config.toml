@@ -14,3 +14,8 @@ secondaryBackgroundColor = "#F2F4F3"
 textColor = "#262730"
 # A plain sans-serif font, readable on small screens
 font = "sans-serif"
+
+[client]
+# "viewer" hides the Deploy button and the developer options of the top right menu, so visitors
+# and screenshots see only the page. Streamlit Cloud reads this file too, so it applies online.
+toolbarMode = "viewer"
