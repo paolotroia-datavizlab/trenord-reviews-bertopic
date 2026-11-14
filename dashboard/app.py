@@ -2,8 +2,8 @@
 #
 # One scrolling page about the Google Play reviews of the Trenord app.
 # The page goes from the most important message to the details: header, three key numbers,
-# what users write about, how things changed over time, a topic explorer and a short
-# note on the method. Every number is computed here from the files in data/processed,
+# what users write about, how things changed over time, what users ask for, a topic explorer
+# and a short note on the method. Every number is computed here from the files in data/processed,
 # so nothing has to be updated by hand when the data changes.
 #
 # Run from the repository root: streamlit run dashboard/app.py
@@ -113,6 +113,21 @@ EXCLUDED_LABEL = "EXCLUDE"
 # The category that holds the problems with the app, used in the second key number card
 APP_ISSUE_CATEGORY = "App Issue"
 
+# The feature request themes left out of the chart of what users ask for. The first is for
+# reports of something broken and the last for wishes too vague to name a feature, so neither is
+# a request for something new; notebook 09 also found that the complaints theme almost never
+# holds a real request.
+NOT_NEW_REQUEST_THEMES = [
+    "Fix something that does not work",
+    "Complaints and support in the app",
+    "Too vague to classify",
+]
+# The bars of the feature requests have no category, so they use one colour: the Okabe-Ito blue
+# of the single-series charts of notebooks 04 and 09
+REQUEST_COLOR = "#0072B2"
+# The thin line of the 95% interval on those bars: the dark grey of the page text
+INTERVAL_COLOR = "#262730"
+
 
 # ─────────────────────────────────────────────────────────────
 # LOAD DATA
@@ -144,6 +159,9 @@ top_reviews = load_reviews("top_reviews_per_topic.csv")
 topic_keywords = load_table("topic_keywords.csv")
 # The agreement between the labels and my manual check, written by notebook 08
 validation = load_table("validation_summary.csv").set_index("measure")
+# One row per feature request theme, with the estimated number of real requests and its
+# interval, written by notebook 09. It holds counts and shares only, no review text.
+feature_requests = load_table("feature_request_themes.csv")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -215,6 +233,26 @@ def excluded_share_per_year(reviews, years):
     return shares
 
 
+def recent_topic_shares(reviews, recent_years):
+    """Share of each topic among the topic reviews of the recent years, as in the recency check of
+    notebook 07. A topic with no review in those years gets 0."""
+    recent_reviews = reviews[reviews["year"].isin(recent_years)]
+    shares = {}
+    for label in reviews["topic_label"].unique():
+        shares[label] = (recent_reviews["topic_label"] == label).mean() * 100
+    return shares
+
+
+def new_request_numbers(requests):
+    """The feature request themes for the chart: only requests for something new, and only the
+    themes with an estimate. A theme with too few reviews checked by hand has an empty estimate in
+    the file, which pandas reads as NaN, so notna() keeps the others. Largest estimate first."""
+    is_new = ~requests["theme"].isin(NOT_NEW_REQUEST_THEMES)
+    has_estimate = requests["estimated_requests"].notna()
+    chosen = requests[is_new & has_estimate]
+    return chosen.sort_values("estimated_requests", ascending=False).reset_index(drop=True)
+
+
 def format_stars(value):
     return f"{value:.2f} stars"
 
@@ -268,6 +306,14 @@ n_topic_reviews = len(topic_reviews)
 n_excluded = int((all_reviews["topic_label"] == EXCLUDED_LABEL).sum())
 excluded_share = n_excluded / n_italian * 100
 app_issue_share = topics[topics["category"] == APP_ISSUE_CATEGORY]["share"].sum()
+
+# The recent period of notebook 07: the last two complete years, for example 2024 and 2025.
+# The column name of the full table is written from the same two years.
+recent_years = [last_complete_year - 1, last_complete_year]
+recent_shares = recent_topic_shares(topic_reviews, recent_years)
+recent_share_column = f"Share {recent_years[0]}-{recent_years[1]} (%)"
+
+new_requests = new_request_numbers(feature_requests)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -488,6 +534,60 @@ def rating_distribution_chart(ratings):
     return style_figure(fig, height=380)
 
 
+def feature_request_chart(requests):
+    """Horizontal bars, one per theme, largest estimate at the top. Each bar is the estimated number
+    of real requests, and the thin line across its end is the 95% interval: the true number most
+    likely lies between its two ends. The layout follows the topic chart: the name above its bar,
+    the value written next to it, no x axis."""
+    # The interval is not symmetric around the estimate: for example an estimate of 50 with an
+    # interval from 20 to 60 goes 30 to the left and only 10 to the right. Plotly draws an error bar from two
+    # lengths measured from the end of the bar, not from the two ends of the interval, so each
+    # length is computed here: array is the length to the right, arrayminus the length to the left.
+    right_lengths = []
+    left_lengths = []
+    for _, row in requests.iterrows():
+        right_lengths.append(row["estimated_high"] - row["estimated_requests"])
+        left_lengths.append(row["estimated_requests"] - row["estimated_low"])
+
+    fig = go.Figure(go.Bar(
+        x=requests["estimated_requests"],
+        y=requests["theme"],
+        orientation="h",
+        marker_color=REQUEST_COLOR,
+        error_x=dict(
+            type="data", symmetric=False, array=right_lengths, arrayminus=left_lengths,
+            color=INTERVAL_COLOR, thickness=1.5, width=5,
+        ),
+        customdata=requests[["estimated_low", "estimated_high", "flagged_reviews", "sample_flagged"]].values,
+        hovertemplate=(
+            "%{y}<br>About %{x:.0f} real requests"
+            "<br>95% interval: %{customdata[0]:.0f} to %{customdata[1]:.0f}"
+            "<br>%{customdata[2]:,} reviews found by the LLM, %{customdata[3]} checked by hand"
+            "<extra></extra>"
+        ),
+    ))
+    # Plotly draws the first row at the bottom, so the order is reversed to put the largest
+    # estimate at the top
+    theme_order = requests["theme"].tolist()
+    theme_order.reverse()
+    fig.update_yaxes(categoryorder="array", categoryarray=theme_order, showticklabels=False)
+    for _, row in requests.iterrows():
+        # The name above the bar, as in the topic chart
+        fig.add_annotation(x=0, y=row["theme"], text=row["theme"], showarrow=False, xanchor="left",
+                           yanchor="bottom", yshift=11, font=dict(size=FONT_SIZE))
+        # The estimate after the right end of the interval, not of the bar, so the text never
+        # sits on the interval line
+        fig.add_annotation(x=row["estimated_high"], y=row["theme"], text=f"{row['estimated_requests']:.0f}",
+                           showarrow=False, xanchor="left", xshift=6, font=dict(size=FONT_SIZE))
+    fig.update_layout(bargap=0.55)
+    style_figure(fig, height=520)
+    # After style_figure, which turns the grid on: no x axis and no grid, as in the topic chart.
+    # The range ends 18% after the longest interval, room enough for its value on a phone screen.
+    fig.update_xaxes(visible=False, showgrid=False, range=[0, requests["estimated_high"].max() * 1.18])
+    fig.update_yaxes(showgrid=False)
+    return fig
+
+
 # ─────────────────────────────────────────────────────────────
 # HEADER
 # st.markdown with unsafe_allow_html=True accepts plain HTML. I use it only where Streamlit has no
@@ -594,6 +694,7 @@ with st.expander("Show the full table"):
             "Category": row["category"],
             "Reviews": row["reviews"],
             "Share (%)": row["share"],
+            recent_share_column: recent_shares[row["topic_label"]],
             "Average rating (stars)": row["avg_rating"],
             "95% interval (stars)": f"{row['ci_low']:.2f} to {row['ci_high']:.2f}",
         })
@@ -604,10 +705,13 @@ with st.expander("Show the full table"):
         column_config={
             "Reviews": st.column_config.NumberColumn(format="%d"),
             "Share (%)": st.column_config.NumberColumn(format="%.1f%%"),
+            recent_share_column: st.column_config.NumberColumn(format="%.1f%%"),
             "Average rating (stars)": st.column_config.NumberColumn(format="%.2f"),
         },
     )
     st.caption(
+        f"The share {recent_years[0]}-{recent_years[1]} is the topic's share of the reviews about a topic "
+        "written in the last two complete years. "
         "The 95% interval is the range in which the true average rating of a topic most likely lies, "
         "given how many reviews it has (t distribution). Wide intervals mean few reviews."
     )
@@ -649,6 +753,36 @@ if not title_sentences:
 chart_title(" ".join(title_sentences))
 show_chart(trend_chart(trend_years, incomplete_years, partial_year_text))
 st.caption("The two lines move together, but this does not prove one caused the other.")
+
+# ─────────────────────────────────────────────────────────────
+# WHAT USERS ASK FOR
+# Notebook 09 found the reviews that ask for something new with an LLM, put each in a theme and
+# checked a sample by hand. The LLM also flags many reports of broken features, so the count of
+# each theme was multiplied by the share of real requests measured in the sample: the bars show
+# that estimate, not the raw count.
+# ─────────────────────────────────────────────────────────────
+
+st.subheader("What users ask for")
+st.markdown(
+    "An LLM found the reviews that ask for something new, and I checked them against my own labels. "
+    "The bars show the estimated number of real requests, with their uncertainty."
+)
+
+# The title names the firmest estimate: the theme with the highest lower end of the interval.
+# Even in the least favourable case it keeps more real requests than any other theme, although
+# another theme may have a larger estimate. idxmax gives the row of the highest value.
+firmest = new_requests.loc[new_requests["estimated_low"].idxmax()]
+chart_title(
+    f"{firmest['theme']} is the firmest request: about {firmest['estimated_requests']:.0f} reviews "
+    f"({firmest['estimated_low']:.0f} to {firmest['estimated_high']:.0f})"
+)
+show_chart(feature_request_chart(new_requests))
+# The reviews checked by hand behind the estimates of this chart: the flagged reviews of my
+# coded sample that fall in these themes
+n_checked = int(new_requests["sample_flagged"].sum())
+st.caption(
+    f"Estimated from {n_checked} checked reviews; themes with few checked reviews have wide intervals."
+)
 
 # ─────────────────────────────────────────────────────────────
 # EXPLORE A TOPIC
@@ -761,7 +895,8 @@ st.markdown(
     f"{n_italian:,} Italian reviews from Google Play, grouped into {len(topics)} topics with BERTopic "
     f"and named by hand. {n_excluded:,} generic reviews like \"great\" or \"terrible\" are left out. "
     f"A manual check of {int(weighted['sample_size'])} reviews agrees with the topics in "
-    f"{weighted['value'] * 100:.1f}% of cases."
+    f"{weighted['value'] * 100:.1f}% of cases. "
+    "Feature requests were found with an LLM and checked against a sample I labelled myself."
 )
 st.markdown(
     "Google Play only. Unhappy users write more, so the shares describe reviewers, not all users."

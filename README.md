@@ -12,6 +12,9 @@ What do people complain about in the Trenord app? I collected 6,951 Italian revi
 - The average rating fell from 3.54 stars in 2015 to 1.52 in 2025 (1.49 in Jan-Aug 2026).
 - Trenord replied on Google Play to 83-100% of reviews every year until 2020, and to less than 4% every year since 2022.
 - 84.9% of the reviews about a specific topic describe a problem with the app. The most common are inaccurate train info (25.0%) and failed ticket purchases (19.1%).
+- Problems with stability and usability are growing: in 2024-2025 they were 36.6% of the reviews about a specific topic, against 28.1% over the whole period.
+- Praise has almost disappeared: ease of use and easy purchases were 12.3% of the topic reviews over the whole period, but 3.5% in 2024-2025.
+- About 7.7% of the reviews ask for something new (95% CI 4.7% to 11.1%). The clearest requests are about train information and notifications.
 - What users like most is ease of use (463 reviews, 4.54 stars).
 - A blind check of 196 reviews, which I labelled myself, agrees with the topics in 86.6% of cases (95% CI 81.7% to 91.2%).
 
@@ -19,22 +22,25 @@ What do people complain about in the Trenord app? I collected 6,951 Italian revi
 
 ## What Trenord could fix first
 
-1. Train information, the largest topic.
+1. Train information, the largest topic and also the clearest request: users want more information, not only correct information.
 2. Buying and using a ticket: tickets, subscriptions and QR codes are 31.7% of the reviews.
-3. App stability, usability and login.
+3. App stability, usability and login, which are growing.
 4. Replies to reviews on Google Play.
+
+And bring back what users liked: ease of use and easy purchases, now rarely praised.
 
 ## How it works
 
-The analysis is in eight notebooks: scraping, anonymization, cleaning, exploratory analysis, model selection, training, labeling, validation. The choices and checks behind each step are in [docs/architecture.md](docs/architecture.md).
+The analysis is in nine notebooks: scraping, anonymization, cleaning, exploratory analysis, model selection, training, labeling, validation, feature requests. The choices and checks behind each step are in [docs/architecture.md](docs/architecture.md).
 
-Python 3.13 · pandas · spaCy · BERTopic · Plotly · Streamlit
+Python 3.13 · pandas · spaCy · BERTopic · scikit-learn · GPT-5.4 mini via OpenRouter · Plotly · Streamlit
 
 ## Limits
 
 - Google Play only, and only the written reviews the scraper could reach.
 - Unhappy users write more, so the shares describe reviewers, not all users.
 - 953 generic reviews ("great", "terrible") are left out of the topics.
+- Feature requests come from an LLM checked on a small sample, so most estimates are wide.
 
 ## License
 
