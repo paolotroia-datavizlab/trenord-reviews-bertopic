@@ -25,7 +25,7 @@ TOPICS = REVIEWS_PER_TOPIC.index.tolist()  # largest first, as in the dropdown
 N_KPIS = 3
 
 # The feature request themes the table should show: requests for something new with an estimate,
-# read from the same file the dashboard uses, highest lower end of the interval first
+# read from the same file the dashboard uses, largest estimate first
 feature_requests = pd.read_csv(DATA_DIR / "feature_request_themes.csv", encoding="utf-8-sig")
 NOT_NEW_REQUEST_THEMES = [
     "Fix something that does not work",
@@ -34,8 +34,11 @@ NOT_NEW_REQUEST_THEMES = [
 ]
 table_requests = feature_requests[
     ~feature_requests["theme"].isin(NOT_NEW_REQUEST_THEMES) & feature_requests["estimated_requests"].notna()
-].sort_values("estimated_low", ascending=False)
+].sort_values("estimated_requests", ascending=False)
 REQUEST_THEMES = table_requests["theme"].tolist()
+# The theme of the title: the highest lower end of the interval
+CLEAREST_THEME = table_requests.loc[table_requests["estimated_low"].idxmax(), "theme"]
+REQUEST_COLUMNS = ["Theme", "What users ask for", "Reviews", "How sure"]
 # The example reviews of notebook 09, one per theme that has one
 request_examples = pd.read_csv(DATA_DIR / "feature_request_examples.csv", encoding="utf-8-sig")
 EXAMPLES_LABEL = "See a real review for each theme"
@@ -61,31 +64,46 @@ def test_page_renders():
     ]
 
 
+def expected_certainty(row):
+    """The "How sure" label, computed here from the CSV with the thresholds of the page: the width of
+    the 95% interval divided by the estimate, below 0.5 High, up to 1 Medium, above 1 Low."""
+    ratio = (row["estimated_high"] - row["estimated_low"]) / row["estimated_requests"]
+    if ratio < 0.5:
+        return "●●● High"
+    if ratio <= 1:
+        return "●●○ Medium"
+    return "●○○ Low"
+
+
+def find_request_table(at):
+    """The table of what users ask for, found by its columns among the dataframes of the page."""
+    for element in at.dataframe:
+        if element.value.columns.tolist() == REQUEST_COLUMNS:
+            return element.value
+    return None
+
+
 def test_feature_requests_section_shows_its_table():
     at = run_app()
     assert_no_exception(at)
     # The title names the theme with the highest lower end of the interval
     titles = [element.value for element in at.markdown]
-    assert f"##### The clearest request: {REQUEST_THEMES[0]}" in titles
-    # The section is one table: one row per theme, in the order of the lower end, none of the
-    # three themes that are not new requests, and each estimate written in words
-    assert len(at.table) == 1
-    table = at.table[0].value
-    assert table.columns.tolist() == ["Theme", "What users ask for", "Estimated reviews"]
+    assert f"##### The clearest request: {CLEAREST_THEME}" in titles
+    # One row per theme, largest estimate first, none of the three themes that are not new
+    # requests, a phrase in every row, the estimate rounded once and the label of how sure it is
+    table = find_request_table(at)
+    assert table is not None, "No table with the columns of the feature requests"
     assert table["Theme"].tolist() == REQUEST_THEMES
     for theme in NOT_NEW_REQUEST_THEMES:
         assert theme not in table["Theme"].tolist()
     for i, (_, row) in enumerate(table_requests.iterrows()):
-        expected = (f"about {row['estimated_requests']:.0f}, "
-                    f"between {row['estimated_low']:.0f} and {row['estimated_high']:.0f}")
-        assert table["Estimated reviews"].iloc[i] == expected
         assert table["What users ask for"].iloc[i] != ""
+        assert table["Reviews"].iloc[i] == f"about {row['estimated_requests']:.0f}"
+        assert table["How sure"].iloc[i] == expected_certainty(row)
     # The caption gives the number of reviews checked by hand, computed from the CSV
     n_checked = int(table_requests["sample_flagged"].sum())
     captions = [caption.value for caption in at.caption]
-    expected_caption = (f"Estimated from {n_checked} reviews I checked by hand. "
-                        "A wide range means the estimate is uncertain.")
-    assert expected_caption in captions
+    assert f"Estimated from {n_checked} reviews I checked by hand." in captions
 
 
 def test_feature_request_examples_expander():

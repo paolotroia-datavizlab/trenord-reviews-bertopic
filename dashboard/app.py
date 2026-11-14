@@ -136,6 +136,13 @@ REQUEST_PHRASES = {
     "Login and account": "Staying logged in, biometric login, editing the profile",
     "Favourites, widgets and trip planning": "Widgets, favourite routes and a better search",
 }
+# How sure each estimate is, from the width of its 95% interval compared with the estimate itself:
+# (high - low) / estimate. A ratio below HIGH_CERTAINTY_MAX_RATIO means the whole range is narrower
+# than half the estimate, so the number is firm: "High". Up to MEDIUM_CERTAINTY_MAX_RATIO the range
+# is at most as wide as the estimate: "Medium". Above it the range is wider than the estimate
+# itself, so the true number could be several times smaller or larger: "Low".
+HIGH_CERTAINTY_MAX_RATIO = 0.5
+MEDIUM_CERTAINTY_MAX_RATIO = 1.0
 
 
 # ─────────────────────────────────────────────────────────────
@@ -258,19 +265,33 @@ def recent_topic_shares(reviews, recent_years):
 def new_request_numbers(requests):
     """The feature request themes for the table: only requests for something new, and only the
     themes with an estimate. A theme with too few reviews checked by hand has an empty estimate in
-    the file, which pandas reads as NaN, so notna() keeps the others. Sorted by the lower end of
-    the interval, highest first: the firmest estimates come first, not the largest."""
+    the file, which pandas reads as NaN, so notna() keeps the others. Largest estimate first."""
     is_new = ~requests["theme"].isin(NOT_NEW_REQUEST_THEMES)
     has_estimate = requests["estimated_requests"].notna()
     chosen = requests[is_new & has_estimate]
-    return chosen.sort_values("estimated_low", ascending=False).reset_index(drop=True)
+    return chosen.sort_values("estimated_requests", ascending=False).reset_index(drop=True)
 
 
-def format_estimate(row):
-    """The estimate and its 95% interval in words, each rounded once to a whole number of reviews,
-    for example "about 107, between 81 and 111"."""
-    return (f"about {row['estimated_requests']:.0f}, "
-            f"between {row['estimated_low']:.0f} and {row['estimated_high']:.0f}")
+def format_reviews(row):
+    """The estimate in words, rounded once to a whole number of reviews from the full-precision
+    value in the file, for example "about 107"."""
+    return f"about {row['estimated_requests']:.0f}"
+
+
+def interval_ratio(row):
+    """How wide the 95% interval is compared with the estimate: (high - low) / estimate. For example
+    an estimate of 100 with an interval from 80 to 110 gives 30 / 100 = 0.3."""
+    return (row["estimated_high"] - row["estimated_low"]) / row["estimated_requests"]
+
+
+def certainty_label(ratio):
+    """The ratio as a label with three dots, filled as far as the estimate is sure. The thresholds
+    are explained with HIGH_CERTAINTY_MAX_RATIO above."""
+    if ratio < HIGH_CERTAINTY_MAX_RATIO:
+        return "●●● High"
+    if ratio <= MEDIUM_CERTAINTY_MAX_RATIO:
+        return "●●○ Medium"
+    return "●○○ Low"
 
 
 def escape_markdown(text):
@@ -751,29 +772,52 @@ st.markdown(
 
 # The title names the clearest request: the theme with the highest lower end of the interval.
 # Even in the least favourable case it keeps more real requests than any other theme, although
-# another theme may have a larger estimate. new_requests is sorted by that lower end, so the
-# clearest request is its first row.
-clearest = new_requests.iloc[0]
+# another theme may have a larger estimate. The table is sorted by the estimate, so idxmax finds
+# the row with the highest lower end, and .loc reads that row.
+clearest = new_requests.loc[new_requests["estimated_low"].idxmax()]
 chart_title(f"The clearest request: {clearest['theme']}")
 
-# A table, not a chart: the phrases say what users want, and the ranges are easier to read as
-# words than as error bars. st.table draws a static table whose long cells wrap onto more lines,
-# so it fits a phone screen; st.dataframe would cut them. hide_index hides the row numbers.
+# A table, not a chart: the phrases say what users want, the estimate is a number in words, and
+# "How sure" turns the width of the interval into three levels, easier to read than error bars.
 request_rows = []
 for _, row in new_requests.iterrows():
     request_rows.append({
         "Theme": row["theme"],
         "What users ask for": REQUEST_PHRASES.get(row["theme"], ""),
-        "Estimated reviews": format_estimate(row),
+        "Reviews": format_reviews(row),
+        "How sure": certainty_label(interval_ratio(row)),
     })
-st.table(pd.DataFrame(request_rows), hide_index=True)
+
+# st.dataframe with column_config, as the full table of the topics. TextColumn sets the width of a
+# column in pixels and its help text, which appears when the reader points at the column header.
+# The theme and the phrase get the widest columns; with width="stretch" every column grows in
+# proportion to fill a computer screen, so no text is cut there. A phone is too narrow for the four
+# columns, so the table scrolls sideways inside its own frame, and the page does not.
+st.dataframe(
+    pd.DataFrame(request_rows),
+    hide_index=True,
+    width="stretch",
+    column_config={
+        "Theme": st.column_config.TextColumn(width=240),
+        "What users ask for": st.column_config.TextColumn(width=420),
+        "Reviews": st.column_config.TextColumn(
+            width=100,
+            help="Estimated number of reviews that ask for this, corrected with the reviews I checked by hand.",
+        ),
+        "How sure": st.column_config.TextColumn(
+            width=120,
+            help=(
+                "Based on how wide the 95% range of the estimate is: High when the range is narrower than "
+                "half the estimate, Low when it is wider than the estimate."
+            ),
+        ),
+    },
+)
 
 # The reviews checked by hand behind these estimates: the flagged reviews of my coded sample
 # that fall in these themes
 n_checked = int(new_requests["sample_flagged"].sum())
-st.caption(
-    f"Estimated from {n_checked} reviews I checked by hand. A wide range means the estimate is uncertain."
-)
+st.caption(f"Estimated from {n_checked} reviews I checked by hand.")
 
 # One real review per theme, in the order of the table. dict(zip(...)) pairs each theme with the
 # row number of its example; a theme with no example is skipped.
