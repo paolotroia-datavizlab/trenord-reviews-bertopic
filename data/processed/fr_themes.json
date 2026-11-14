@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Fix something that does not work",
+    "definition": "Phrases asking to repair an existing app feature that is broken, missing, failing, crashing, or behaving incorrectly, rather than adding a new capability."
+  },
+  {
+    "name": "Ticket purchase and sales flow",
+    "definition": "Phrases about buying tickets, carnet, special fares, multi-person or round-trip tickets, guest checkout, route/station selection, and making the purchase journey clearer or easier."
+  },
+  {
+    "name": "Subscriptions and passes",
+    "definition": "Phrases about buying, renewing, activating, viewing, changing, or digitizing subscriptions, passes, and cards, including Io Viaggio and monthly/weekly options."
+  },
+  {
+    "name": "Payments, invoices, and stored billing data",
+    "definition": "Phrases about payment methods and wallets, adding/removing cards, PayPal/Satispay/Google Pay/credit card support, transport bonus, invoices, receipts, billing data, and payment confirmations."
+  },
+  {
+    "name": "Tickets, QR codes, and sharing",
+    "definition": "Phrases about viewing, retrieving, downloading, printing, emailing, sharing, screenshotting, or validating tickets and QR codes, including wallet and offline access."
+  },
+  {
+    "name": "Train status, delays, disruptions, and platform info",
+    "definition": "Phrases about real-time train information such as delays, cancellations, strikes, platform/binario, service interruptions, track changes, and station board syncing."
+  },
+  {
+    "name": "Favorites, widgets, and trip planning",
+    "definition": "Phrases about favorite trains, stations, lines, saved routes, widgets, shortcuts, search filters, route planning, and personalized home or notification preferences."
+  },
+  {
+    "name": "Refunds, complaints, and customer support",
+    "definition": "Phrases asking for refunds, reimbursement, compensation, complaint submission, support requests, claim tracking, or contact with Trenord/customer service."
+  },
+  {
+    "name": "Login, registration, and account management",
+    "definition": "Phrases about signing up, logging in, keeping sessions active, password recovery, profile editing, personal data, biometrics, account linking, and account access controls."
+  },
+  {
+    "name": "Accessibility, usability, and app design",
+    "definition": "Phrases requesting UI simplification, clearer wording, better navigation, translation/language support, dark mode, lighter app performance, accessibility, or broader device compatibility."
+  },
+  {
+    "name": "Notifications and alerts",
+    "definition": "Phrases about push notifications, reminders, customizable alert timing, notification preferences, marking notifications read, or making alerts more visible and timely."
+  },
+  {
+    "name": "Other travel features and service information",
+    "definition": "Phrases about extra travel-related functions or general service information not covered elsewhere, such as maps, alarms, bike-specific info, regional coverage, and additional transport details."
+  }
+]
