@@ -113,7 +113,7 @@ EXCLUDED_LABEL = "EXCLUDE"
 # The category that holds the problems with the app, used in the second key number card
 APP_ISSUE_CATEGORY = "App Issue"
 
-# The feature request themes left out of the chart of what users ask for. The first is for
+# The feature request themes left out of the table of what users ask for. The first is for
 # reports of something broken and the last for wishes too vague to name a feature, so neither is
 # a request for something new; notebook 09 also found that the complaints theme almost never
 # holds a real request.
@@ -122,11 +122,20 @@ NOT_NEW_REQUEST_THEMES = [
     "Complaints and support in the app",
     "Too vague to classify",
 ]
-# The bars of the feature requests have no category, so they use one colour: the Okabe-Ito blue
-# of the single-series charts of notebooks 04 and 09
-REQUEST_COLOR = "#0072B2"
-# The thin line of the 95% interval on those bars: the dark grey of the page text
-INTERVAL_COLOR = "#262730"
+# What users ask for in each theme, in a few plain words. I wrote these phrases after reading the
+# requests of each theme; the theme names come from notebook 09. A theme missing from this
+# dictionary still gets its row in the table, with an empty phrase.
+REQUEST_PHRASES = {
+    "Train information": "Platform, cause of delays and cancellations shown clearly",
+    "Notifications": "Alerts for my trains, at times I choose",
+    "Subscriptions and passes": "Buying, renewing and digitising passes and cards in the app",
+    "Ticket purchase": "More ticket types and an easier way to buy them",
+    "Payments and invoices": "More payment methods, saved cards and invoices",
+    "Usability and design": "A simpler, clearer app, also in English",
+    "Tickets and QR codes": "Downloading, sharing or printing tickets and QR codes",
+    "Login and account": "Staying logged in, biometric login, editing the profile",
+    "Favourites, widgets and trip planning": "Widgets, favourite routes and a better search",
+}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -162,6 +171,9 @@ validation = load_table("validation_summary.csv").set_index("measure")
 # One row per feature request theme, with the estimated number of real requests and its
 # interval, written by notebook 09. It holds counts and shares only, no review text.
 feature_requests = load_table("feature_request_themes.csv")
+# One real review per theme, chosen in notebook 09 with a fixed rule: theme, text, rating,
+# thumbs up and year
+request_examples = load_table("feature_request_examples.csv")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -244,17 +256,41 @@ def recent_topic_shares(reviews, recent_years):
 
 
 def new_request_numbers(requests):
-    """The feature request themes for the chart: only requests for something new, and only the
+    """The feature request themes for the table: only requests for something new, and only the
     themes with an estimate. A theme with too few reviews checked by hand has an empty estimate in
-    the file, which pandas reads as NaN, so notna() keeps the others. Largest estimate first."""
+    the file, which pandas reads as NaN, so notna() keeps the others. Sorted by the lower end of
+    the interval, highest first: the firmest estimates come first, not the largest."""
     is_new = ~requests["theme"].isin(NOT_NEW_REQUEST_THEMES)
     has_estimate = requests["estimated_requests"].notna()
     chosen = requests[is_new & has_estimate]
-    return chosen.sort_values("estimated_requests", ascending=False).reset_index(drop=True)
+    return chosen.sort_values("estimated_low", ascending=False).reset_index(drop=True)
+
+
+def format_estimate(row):
+    """The estimate and its 95% interval in words, each rounded once to a whole number of reviews,
+    for example "about 107, between 81 and 111"."""
+    return (f"about {row['estimated_requests']:.0f}, "
+            f"between {row['estimated_low']:.0f} and {row['estimated_high']:.0f}")
+
+
+def escape_markdown(text):
+    """A review is written by a user, so it can hold characters that Markdown reads as formatting:
+    a * would end the italics early, and a $ would start a formula. A backslash in front of each
+    one makes Markdown show it as it is. A line break would also end the italics, so it becomes a
+    space."""
+    escaped = text.replace("\\", "\\\\")
+    for character in "*_`$#[]<>|~":
+        escaped = escaped.replace(character, "\\" + character)
+    return escaped.replace("\n", " ")
 
 
 def format_stars(value):
     return f"{value:.2f} stars"
+
+
+def star_symbols(rating):
+    """A rating as five stars, filled up to the rating: 3 gives ★★★☆☆."""
+    return "★" * int(rating) + "☆" * (5 - int(rating))
 
 
 last_complete_year = find_last_complete_year(all_reviews)
@@ -534,60 +570,6 @@ def rating_distribution_chart(ratings):
     return style_figure(fig, height=380)
 
 
-def feature_request_chart(requests):
-    """Horizontal bars, one per theme, largest estimate at the top. Each bar is the estimated number
-    of real requests, and the thin line across its end is the 95% interval: the true number most
-    likely lies between its two ends. The layout follows the topic chart: the name above its bar,
-    the value written next to it, no x axis."""
-    # The interval is not symmetric around the estimate: for example an estimate of 50 with an
-    # interval from 20 to 60 goes 30 to the left and only 10 to the right. Plotly draws an error bar from two
-    # lengths measured from the end of the bar, not from the two ends of the interval, so each
-    # length is computed here: array is the length to the right, arrayminus the length to the left.
-    right_lengths = []
-    left_lengths = []
-    for _, row in requests.iterrows():
-        right_lengths.append(row["estimated_high"] - row["estimated_requests"])
-        left_lengths.append(row["estimated_requests"] - row["estimated_low"])
-
-    fig = go.Figure(go.Bar(
-        x=requests["estimated_requests"],
-        y=requests["theme"],
-        orientation="h",
-        marker_color=REQUEST_COLOR,
-        error_x=dict(
-            type="data", symmetric=False, array=right_lengths, arrayminus=left_lengths,
-            color=INTERVAL_COLOR, thickness=1.5, width=5,
-        ),
-        customdata=requests[["estimated_low", "estimated_high", "flagged_reviews", "sample_flagged"]].values,
-        hovertemplate=(
-            "%{y}<br>About %{x:.0f} real requests"
-            "<br>95% interval: %{customdata[0]:.0f} to %{customdata[1]:.0f}"
-            "<br>%{customdata[2]:,} reviews found by the LLM, %{customdata[3]} checked by hand"
-            "<extra></extra>"
-        ),
-    ))
-    # Plotly draws the first row at the bottom, so the order is reversed to put the largest
-    # estimate at the top
-    theme_order = requests["theme"].tolist()
-    theme_order.reverse()
-    fig.update_yaxes(categoryorder="array", categoryarray=theme_order, showticklabels=False)
-    for _, row in requests.iterrows():
-        # The name above the bar, as in the topic chart
-        fig.add_annotation(x=0, y=row["theme"], text=row["theme"], showarrow=False, xanchor="left",
-                           yanchor="bottom", yshift=11, font=dict(size=FONT_SIZE))
-        # The estimate after the right end of the interval, not of the bar, so the text never
-        # sits on the interval line
-        fig.add_annotation(x=row["estimated_high"], y=row["theme"], text=f"{row['estimated_requests']:.0f}",
-                           showarrow=False, xanchor="left", xshift=6, font=dict(size=FONT_SIZE))
-    fig.update_layout(bargap=0.55)
-    style_figure(fig, height=520)
-    # After style_figure, which turns the grid on: no x axis and no grid, as in the topic chart.
-    # The range ends 18% after the longest interval, room enough for its value on a phone screen.
-    fig.update_xaxes(visible=False, showgrid=False, range=[0, requests["estimated_high"].max() * 1.18])
-    fig.update_yaxes(showgrid=False)
-    return fig
-
-
 # ─────────────────────────────────────────────────────────────
 # HEADER
 # st.markdown with unsafe_allow_html=True accepts plain HTML. I use it only where Streamlit has no
@@ -758,31 +740,57 @@ st.caption("The two lines move together, but this does not prove one caused the 
 # WHAT USERS ASK FOR
 # Notebook 09 found the reviews that ask for something new with an LLM, put each in a theme and
 # checked a sample by hand. The LLM also flags many reports of broken features, so the count of
-# each theme was multiplied by the share of real requests measured in the sample: the bars show
+# each theme was multiplied by the share of real requests measured in the sample: the table shows
 # that estimate, not the raw count.
 # ─────────────────────────────────────────────────────────────
 
 st.subheader("What users ask for")
 st.markdown(
-    "An LLM found the reviews that ask for something new, and I checked them against my own labels. "
-    "The bars show the estimated number of real requests, with their uncertainty."
+    "An LLM found the reviews that ask for something new, and I checked them against my own labels."
 )
 
-# The title names the firmest estimate: the theme with the highest lower end of the interval.
+# The title names the clearest request: the theme with the highest lower end of the interval.
 # Even in the least favourable case it keeps more real requests than any other theme, although
-# another theme may have a larger estimate. idxmax gives the row of the highest value.
-firmest = new_requests.loc[new_requests["estimated_low"].idxmax()]
-chart_title(
-    f"{firmest['theme']} is the firmest request: about {firmest['estimated_requests']:.0f} reviews "
-    f"({firmest['estimated_low']:.0f} to {firmest['estimated_high']:.0f})"
-)
-show_chart(feature_request_chart(new_requests))
-# The reviews checked by hand behind the estimates of this chart: the flagged reviews of my
-# coded sample that fall in these themes
+# another theme may have a larger estimate. new_requests is sorted by that lower end, so the
+# clearest request is its first row.
+clearest = new_requests.iloc[0]
+chart_title(f"The clearest request: {clearest['theme']}")
+
+# A table, not a chart: the phrases say what users want, and the ranges are easier to read as
+# words than as error bars. st.table draws a static table whose long cells wrap onto more lines,
+# so it fits a phone screen; st.dataframe would cut them. hide_index hides the row numbers.
+request_rows = []
+for _, row in new_requests.iterrows():
+    request_rows.append({
+        "Theme": row["theme"],
+        "What users ask for": REQUEST_PHRASES.get(row["theme"], ""),
+        "Estimated reviews": format_estimate(row),
+    })
+st.table(pd.DataFrame(request_rows), hide_index=True)
+
+# The reviews checked by hand behind these estimates: the flagged reviews of my coded sample
+# that fall in these themes
 n_checked = int(new_requests["sample_flagged"].sum())
 st.caption(
-    f"Estimated from {n_checked} checked reviews; themes with few checked reviews have wide intervals."
+    f"Estimated from {n_checked} reviews I checked by hand. A wide range means the estimate is uncertain."
 )
+
+# One real review per theme, in the order of the table. dict(zip(...)) pairs each theme with the
+# row number of its example; a theme with no example is skipped.
+example_row_by_theme = dict(zip(request_examples["theme"], request_examples.index))
+with st.expander("See a real review for each theme"):
+    st.markdown("Reviews are in Italian, as written by users.")
+    for theme_name in new_requests["theme"]:
+        if theme_name not in example_row_by_theme:
+            continue
+        example = request_examples.loc[example_row_by_theme[theme_name]]
+        # Two spaces before a line break keep the three lines in one paragraph: the theme in
+        # bold, the review in italics, then its stars and year
+        st.markdown(
+            f"**{theme_name}**  \n"
+            f"*{escape_markdown(example['text'])}*  \n"
+            f"{star_symbols(example['rating'])} · {int(example['year'])}"
+        )
 
 # ─────────────────────────────────────────────────────────────
 # EXPLORE A TOPIC
@@ -874,7 +882,7 @@ with st.container(border=True):
     else:
         position = 0
         for _, row in selected_top.iterrows():
-            stars = "★" * int(row["rating"]) + "☆" * (5 - int(row["rating"]))
+            stars = star_symbols(row["rating"])
             date = row["date"].strftime("%Y-%m-%d")
             # The first review is open, so the section never looks empty
             with st.expander(f"{int(row['thumbs_up'])} upvotes · {stars} · {date}", expanded=(position == 0)):
