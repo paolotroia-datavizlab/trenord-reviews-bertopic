@@ -38,7 +38,8 @@ table_requests = feature_requests[
 REQUEST_THEMES = table_requests["theme"].tolist()
 # The theme of the title: the highest lower end of the interval
 CLEAREST_THEME = table_requests.loc[table_requests["estimated_low"].idxmax(), "theme"]
-REQUEST_COLUMNS = ["Theme", "What users ask for", "Reviews", "How sure"]
+# The columns of the table, in their order: the numbers right after the theme, the phrase last
+REQUEST_COLUMNS = ["Theme", "Reviews asking for it", "How sure", "What users ask for"]
 # The example reviews of notebook 09, one per theme that has one
 request_examples = pd.read_csv(DATA_DIR / "feature_request_examples.csv", encoding="utf-8-sig")
 EXAMPLES_LABEL = "See a real review for each theme"
@@ -98,7 +99,7 @@ def test_feature_requests_section_shows_its_table():
         assert theme not in table["Theme"].tolist()
     for i, (_, row) in enumerate(table_requests.iterrows()):
         assert table["What users ask for"].iloc[i] != ""
-        assert table["Reviews"].iloc[i] == f"about {row['estimated_requests']:.0f}"
+        assert table["Reviews asking for it"].iloc[i] == f"about {row['estimated_requests']:.0f}"
         assert table["How sure"].iloc[i] == expected_certainty(row)
     # The caption gives the number of reviews checked by hand, computed from the CSV
     n_checked = int(table_requests["sample_flagged"].sum())

@@ -779,38 +779,41 @@ chart_title(f"The clearest request: {clearest['theme']}")
 
 # A table, not a chart: the phrases say what users want, the estimate is a number in words, and
 # "How sure" turns the width of the interval into three levels, easier to read than error bars.
+# The keys of each row give the order of the columns: the numbers come right after the theme, so a
+# phone shows them without scrolling, and the phrase, the longest text, comes last.
 request_rows = []
 for _, row in new_requests.iterrows():
     request_rows.append({
         "Theme": row["theme"],
-        "What users ask for": REQUEST_PHRASES.get(row["theme"], ""),
-        "Reviews": format_reviews(row),
+        "Reviews asking for it": format_reviews(row),
         "How sure": certainty_label(interval_ratio(row)),
+        "What users ask for": REQUEST_PHRASES.get(row["theme"], ""),
     })
 
 # st.dataframe with column_config, as the full table of the topics. TextColumn sets the width of a
 # column in pixels and its help text, which appears when the reader points at the column header.
-# The theme and the phrase get the widest columns; with width="stretch" every column grows in
-# proportion to fill a computer screen, so no text is cut there. A phone is too narrow for the four
-# columns, so the table scrolls sideways inside its own frame, and the page does not.
+# The first three widths add up to the width of a phone screen, so the theme and its two numbers
+# fit there; the phrase follows, and on a phone the table scrolls sideways inside its own frame to
+# show it, while the page does not. With width="stretch" every column grows in proportion to fill
+# a computer screen, so no text is cut there.
 st.dataframe(
     pd.DataFrame(request_rows),
     hide_index=True,
     width="stretch",
     column_config={
-        "Theme": st.column_config.TextColumn(width=240),
-        "What users ask for": st.column_config.TextColumn(width=420),
-        "Reviews": st.column_config.TextColumn(
-            width=100,
+        "Theme": st.column_config.TextColumn(width=170),
+        "Reviews asking for it": st.column_config.TextColumn(
+            width=88,
             help="Estimated number of reviews that ask for this, corrected with the reviews I checked by hand.",
         ),
         "How sure": st.column_config.TextColumn(
-            width=120,
+            width=98,
             help=(
                 "Based on how wide the 95% range of the estimate is: High when the range is narrower than "
                 "half the estimate, Low when it is wider than the estimate."
             ),
         ),
+        "What users ask for": st.column_config.TextColumn(width=420),
     },
 )
 
