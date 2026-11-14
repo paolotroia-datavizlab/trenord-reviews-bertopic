@@ -1,14 +1,14 @@
-﻿theme,flagged_reviews,share,flagged_recent,share_recent
-Subscriptions and passes,245,0.1916,40,0.1423
-Ticket purchase,174,0.136,33,0.1174
-Fix something that does not work,157,0.1228,31,0.1103
-Tickets and QR codes,128,0.1001,55,0.1957
-Payments and invoices,123,0.0962,28,0.0996
-Train information,111,0.0868,20,0.0712
-Notifications,73,0.0571,6,0.0214
-Login and account,66,0.0516,29,0.1032
-Usability and design,65,0.0508,11,0.0391
-Complaints and support in the app,64,0.05,13,0.0463
-"Favourites, widgets and trip planning",57,0.0446,8,0.0285
-Other features,14,0.0109,6,0.0214
-Too vague to classify,2,0.0016,1,0.0036
+﻿theme,flagged_reviews,share,flagged_recent,share_recent,sample_flagged,sample_yes,precision,precision_low,precision_high,estimated_requests,estimated_low,estimated_high
+Subscriptions and passes,245,0.1916,40,0.1423,30,21,0.5829,0.2185,0.9309,142.8,53.5,228.1
+Ticket purchase,174,0.136,33,0.1174,16,9,0.2997,0.0421,0.8894,52.1,7.3,154.8
+Fix something that does not work,157,0.1228,31,0.1103,9,1,0.0195,0.0,0.3333,3.1,0.0,52.3
+Tickets and QR codes,128,0.1001,55,0.1957,15,11,0.1401,0.0505,0.9091,17.9,6.5,116.4
+Payments and invoices,123,0.0962,28,0.0996,15,11,0.4098,0.0805,0.9731,50.4,9.9,119.7
+Train information,111,0.0868,20,0.0712,14,12,0.9645,0.7273,1.0,107.1,80.7,111.0
+Notifications,73,0.0571,6,0.0214,10,7,0.9038,0.4,1.0,66.0,29.2,73.0
+Login and account,66,0.0516,29,0.1032,9,4,0.2687,0.0074,0.8935,17.7,0.5,59.0
+Usability and design,65,0.0508,11,0.0391,15,9,0.515,0.0721,0.9657,33.5,4.7,62.8
+Complaints and support in the app,64,0.05,13,0.0463,10,2,0.0211,0.0,0.1283,1.4,0.0,8.2
+"Favourites, widgets and trip planning",57,0.0446,8,0.0285,10,9,0.2887,0.0827,1.0,16.5,4.7,57.0
+Other features,14,0.0109,6,0.0214,1,1,,,,,,
+Too vague to classify,2,0.0016,1,0.0036,0,0,,,,,,
